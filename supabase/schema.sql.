@@ -97,3 +97,47 @@ with check (
   )
 );
 
+-- WEALTHORA: Audit deposit account changes
+create or replace function public.audit_deposit_account_changes()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.audit_logs (
+    actor_id,
+    action,
+    target_type,
+    target_id,
+    metadata
+  )
+  values (
+    auth.uid(),
+    'deposit_account_' || lower(TG_OP),
+    'deposit_account',
+    coalesce(NEW.id, OLD.id)::text,
+    jsonb_build_object(
+      'bank_name', coalesce(NEW.bank_name, OLD.bank_name),
+      'account_name', coalesce(NEW.account_name, OLD.account_name),
+      'account_number_last4',
+        right(coalesce(NEW.account_number, OLD.account_number), 4),
+      'operation', TG_OP
+    )
+  );
+
+  if TG_OP = 'DELETE' then
+    return OLD;
+  end if;
+
+  return NEW;
+end;
+$$;
+
+create trigger deposit_account_audit_trigger
+after insert or update or delete
+on public.deposit_accounts
+for each row
+execute function public.audit_deposit_account_changes();
+
+
