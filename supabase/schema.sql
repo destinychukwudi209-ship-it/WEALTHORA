@@ -479,23 +479,12 @@ CREATE POLICY session_self_read
 ON public.user_sessions FOR SELECT TO authenticated
 USING (user_id = auth.uid());
 
+
 -- -----------------------------------------------------
 -- 16. TABLE PERMISSIONS
 -- -----------------------------------------------------
 
-REVOKE ALL ON ALL TABLES IN SCHEMA public
-FROM PUBLIC, anon, authenticated;
-
--- Profile fields: never expose PIN hashes.
-GRANT SELECT (
-  id, full_name, phone, role, status,
-  email_verified_at, phone_verified_at,
-  two_factor_enabled, created_at, updated_at
-) ON public.profiles TO authenticated;
-
--- Read-only customer financial data.
-GRANT SELECT ON
-  REVOKE ALL ON
+REVOKE ALL ON
   public.profiles,
   public.ledger_accounts,
   public.ledger_entries,
@@ -514,6 +503,52 @@ GRANT SELECT ON
   public.user_sessions,
   public.admin_action_approvals
 FROM PUBLIC, anon, authenticated;
+
+-- Profile fields: never expose PIN hashes.
+GRANT SELECT (
+  id, full_name, phone, role, status,
+  email_verified_at, phone_verified_at,
+  two_factor_enabled, created_at, updated_at
+) ON public.profiles TO authenticated;
+
+-- Read-only customer financial data.
+GRANT SELECT ON
+  public.ledger_accounts,
+  public.ledger_entries,
+  public.transactions,
+  public.investments,
+  public.referrals,
+  public.promo_redemptions,
+  public.investment_plans
+TO authenticated;
+
+-- Notification read and read-status update only.
+GRANT SELECT ON public.notifications TO authenticated;
+GRANT UPDATE (read_at) ON public.notifications TO authenticated;
+
+-- Customers can create and read their own support tickets.
+GRANT SELECT ON public.support_tickets TO authenticated;
+GRANT INSERT (user_id, subject)
+ON public.support_tickets TO authenticated;
+
+-- Customers can view withdrawal history.
+GRANT SELECT ON public.withdrawal_requests TO authenticated;
+
+-- RLS controls which deposit accounts customers and admins see.
+GRANT SELECT, INSERT, UPDATE, DELETE
+ON public.deposit_accounts TO authenticated;
+
+-- Customers can view their own active sessions.
+GRANT SELECT ON public.user_sessions TO authenticated;
+
+-- Internal tables remain inaccessible to customers.
+REVOKE ALL ON
+  public.audit_logs,
+  public.login_events,
+  public.admin_action_approvals,
+  public.promo_codes
+FROM PUBLIC, anon, authenticated;
+
 
 -- Notification read and read-status update only.
 GRANT SELECT ON public.notifications TO authenticated;
