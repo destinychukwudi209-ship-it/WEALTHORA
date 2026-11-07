@@ -495,14 +495,25 @@ GRANT SELECT (
 
 -- Read-only customer financial data.
 GRANT SELECT ON
+  REVOKE ALL ON
+  public.profiles,
   public.ledger_accounts,
   public.ledger_entries,
   public.transactions,
+  public.investment_plans,
   public.investments,
   public.referrals,
+  public.promo_codes,
   public.promo_redemptions,
-  public.investment_plans
-TO authenticated;
+  public.notifications,
+  public.support_tickets,
+  public.withdrawal_requests,
+  public.deposit_accounts,
+  public.audit_logs,
+  public.login_events,
+  public.user_sessions,
+  public.admin_action_approvals
+FROM PUBLIC, anon, authenticated;
 
 -- Notification read and read-status update only.
 GRANT SELECT ON public.notifications TO authenticated;
