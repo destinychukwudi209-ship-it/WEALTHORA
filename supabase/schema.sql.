@@ -51,3 +51,49 @@ create policy session_self_read on public.user_sessions for select using (user_i
 -- No customer policies on audit_logs, login_events or admin approvals: customers cannot access these.
 -- Admin operations should go through trusted server routes using verified roles and least-privilege service credentials.
 -- Never expose SUPABASE_SERVICE_ROLE_KEY to browser code.
+
+-- WEALTHORA: Admin-managed deposit bank accounts
+create table public.deposit_accounts (
+  id uuid primary key default gen_random_uuid(),
+  bank_name text not null,
+  account_name text not null,
+  account_number text not null,
+  instructions text,
+  is_active boolean not null default true,
+  created_by uuid references public.profiles(id),
+  updated_by uuid references public.profiles(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.deposit_accounts enable row level security;
+
+-- Customers can only view active deposit accounts.
+create policy deposit_accounts_customer_read
+on public.deposit_accounts
+for select
+to authenticated
+using (is_active = true);
+
+-- Only active admins and super admins can manage accounts.
+create policy deposit_accounts_admin_manage
+on public.deposit_accounts
+for all
+to authenticated
+using (
+  exists (
+    select 1 from public.profiles
+    where id = auth.uid()
+    and role in ('admin', 'super_admin')
+    and status = 'active'
+  )
+)
+with check (
+  exists (
+    select 1 from public.profiles
+    where id = auth.uid()
+    and role in ('admin', 'super_admin')
+    and status = 'active'
+  )
+);
+
