@@ -1,15 +1,34 @@
 
 -- =====================================================
--- WEALTHORA TASK WITHDRAWAL PROCESSING
--- Nigeria time: Africa/Lagos (WAT)
--- Run AFTER schema.sql has been successfully executed.
+-- WEALTHORA TASK WITHDRAWALS
+-- Run only AFTER supabase/schema.sql
+-- Nigeria time: Africa/Lagos
 -- =====================================================
 
 ALTER TABLE public.withdrawal_requests
 ADD COLUMN IF NOT EXISTS payment_reference text;
 
+-- Customers can read their own requests.
+-- Active administrators can read all requests for review.
+DROP POLICY IF EXISTS withdrawal_admin_read
+ON public.withdrawal_requests;
+
+CREATE POLICY withdrawal_admin_read
+ON public.withdrawal_requests
+FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1
+    FROM public.profiles p
+    WHERE p.id = auth.uid()
+      AND p.role IN ('admin', 'super_admin')
+      AND p.status = 'active'
+  )
+);
+
 -- -----------------------------------------------------
--- 1. CUSTOMER REQUESTS A TASK BALANCE WITHDRAWAL
+-- 1. CUSTOMER REQUESTS A TASK WITHDRAWAL
 -- -----------------------------------------------------
 
 CREATE OR REPLACE FUNCTION public.request_task_withdrawal(
@@ -44,8 +63,11 @@ BEGIN
     RAISE EXCEPTION 'Task Balance withdrawals are currently closed.';
   END IF;
 
-  IF p_amount IS NULL OR p_amount <= 0 THEN
-    RAISE EXCEPTION 'Enter a valid withdrawal amount.';
+  IF p_amount IS NULL
+     OR p_amount <= 0
+     OR p_amount::text IN ('NaN', 'Infinity', '-Infinity')
+     OR p_amount <> pg_catalog.round(p_amount, 2) THEN
+    RAISE EXCEPTION 'Enter a valid amount with no more than two decimal places.';
   END IF;
 
   IF pg_catalog.btrim(COALESCE(p_bank_name, '')) = ''
@@ -54,6 +76,13 @@ BEGIN
     RAISE EXCEPTION 'Complete your bank details.';
   END IF;
 
+  IF pg_catalog.length(pg_catalog.btrim(p_account_number)) > 34
+     OR pg_catalog.length(pg_catalog.btrim(p_bank_name)) > 100
+     OR pg_catalog.length(pg_catalog.btrim(p_account_name)) > 150 THEN
+    RAISE EXCEPTION 'One or more bank details are too long.';
+  END IF;
+
+  -- Lock the Task Balance account to serialize withdrawal requests.
   SELECT id
   INTO v_account_id
   FROM public.ledger_accounts
@@ -85,20 +114,11 @@ BEGIN
   END IF;
 
   INSERT INTO public.withdrawal_requests (
-    user_id,
-    account_id,
-    amount,
-    balance_type,
-    bank_name,
-    account_name,
-    account_number,
-    status
+    user_id, account_id, amount, balance_type,
+    bank_name, account_name, account_number, status
   )
   VALUES (
-    v_user_id,
-    v_account_id,
-    p_amount,
-    'task',
+    v_user_id, v_account_id, p_amount, 'task',
     pg_catalog.btrim(p_bank_name),
     pg_catalog.btrim(p_account_name),
     pg_catalog.btrim(p_account_number),
@@ -106,17 +126,10 @@ BEGIN
   )
   RETURNING id INTO v_request_id;
 
-  -- Hold the requested amount immediately.
-  -- This prevents spending the same money twice.
+  -- Hold the amount immediately so it cannot be spent twice.
   INSERT INTO public.ledger_entries (
-    account_id,
-    reference,
-    entry_type,
-    amount,
-    category,
-    status,
-    idempotency_key,
-    description
+    account_id, reference, entry_type, amount,
+    category, status, idempotency_key, description
   )
   VALUES (
     v_account_id,
@@ -127,6 +140,14 @@ BEGIN
     'posted',
     'withdrawal-hold:' || v_request_id::text,
     'Task withdrawal awaiting administrator review'
+  );
+
+  INSERT INTO public.notifications(user_id, title, body, channel)
+  VALUES (
+    v_user_id,
+    'Withdrawal request received',
+    'Your Task Balance withdrawal is pending administrator review.',
+    'in_app'
   );
 
   RETURN v_request_id;
@@ -167,7 +188,8 @@ BEGIN
     RAISE EXCEPTION 'Administrator permission required.';
   END IF;
 
-  IF p_decision NOT IN ('approve', 'reject') THEN
+  IF p_decision IS NULL
+     OR p_decision NOT IN ('approve', 'reject') THEN
     RAISE EXCEPTION 'Invalid administrator decision.';
   END IF;
 
@@ -193,18 +215,20 @@ BEGIN
         reviewed_at = pg_catalog.now()
     WHERE id = p_request_id;
 
+    INSERT INTO public.notifications(user_id, title, body, channel)
+    VALUES (
+      v_request.user_id,
+      'Withdrawal approved',
+      'Your Task Balance withdrawal has been approved. Please allow up to 3 days for payment.',
+      'in_app'
+    );
+
   ELSE
 
-    -- Refund the held amount exactly once.
+    -- Credit the exact held amount back once.
     INSERT INTO public.ledger_entries (
-      account_id,
-      reference,
-      entry_type,
-      amount,
-      category,
-      status,
-      idempotency_key,
-      description
+      account_id, reference, entry_type, amount,
+      category, status, idempotency_key, description
     )
     VALUES (
       v_request.account_id,
@@ -225,14 +249,19 @@ BEGIN
         reviewed_at = pg_catalog.now()
     WHERE id = p_request_id;
 
+    -- Do not disclose the administrator's rejection reason.
+    INSERT INTO public.notifications(user_id, title, body, channel)
+    VALUES (
+      v_request.user_id,
+      'Withdrawal not approved',
+      'Your withdrawal request was not approved. The amount has been refunded to your Task Balance.',
+      'in_app'
+    );
+
   END IF;
 
   INSERT INTO public.audit_logs (
-    actor_id,
-    action,
-    target_type,
-    target_id,
-    metadata
+    actor_id, action, target_type, target_id, metadata
   )
   VALUES (
     v_admin_id,
@@ -248,7 +277,7 @@ END;
 $$;
 
 -- -----------------------------------------------------
--- 3. ADMIN MARKS A VERIFIED PAYMENT AS PAID
+-- 3. ADMIN MARKS VERIFIED PAYMENT AS PAID
 -- -----------------------------------------------------
 
 CREATE OR REPLACE FUNCTION public.mark_task_withdrawal_paid(
@@ -263,6 +292,7 @@ AS $$
 DECLARE
   v_admin_id uuid;
   v_request public.withdrawal_requests%ROWTYPE;
+  v_reference text;
 BEGIN
   v_admin_id := auth.uid();
 
@@ -276,8 +306,10 @@ BEGIN
     RAISE EXCEPTION 'Administrator permission required.';
   END IF;
 
-  IF pg_catalog.btrim(COALESCE(p_payment_reference, '')) = '' THEN
-    RAISE EXCEPTION 'A verified payment reference is required.';
+  v_reference := pg_catalog.btrim(COALESCE(p_payment_reference, ''));
+
+  IF v_reference = '' OR pg_catalog.length(v_reference) > 200 THEN
+    RAISE EXCEPTION 'Enter a valid payment reference.';
   END IF;
 
   SELECT *
@@ -292,16 +324,20 @@ BEGIN
 
   UPDATE public.withdrawal_requests
   SET status = 'paid',
-      payment_reference = pg_catalog.btrim(p_payment_reference),
+      payment_reference = v_reference,
       paid_at = pg_catalog.now()
   WHERE id = p_request_id;
 
+  INSERT INTO public.notifications(user_id, title, body, channel)
+  VALUES (
+    v_request.user_id,
+    'Withdrawal paid',
+    'Your approved Task Balance withdrawal has been marked as paid.',
+    'in_app'
+  );
+
   INSERT INTO public.audit_logs (
-    actor_id,
-    action,
-    target_type,
-    target_id,
-    metadata
+    actor_id, action, target_type, target_id, metadata
   )
   VALUES (
     v_admin_id,
@@ -309,7 +345,7 @@ BEGIN
     'withdrawal_request',
     p_request_id::text,
     pg_catalog.jsonb_build_object(
-      'payment_reference', pg_catalog.btrim(p_payment_reference),
+      'payment_reference', v_reference,
       'amount', v_request.amount
     )
   );
@@ -317,7 +353,7 @@ END;
 $$;
 
 -- -----------------------------------------------------
--- 4. FUNCTION ACCESS
+-- 4. FUNCTION PERMISSIONS
 -- -----------------------------------------------------
 
 REVOKE ALL ON FUNCTION
@@ -345,5 +381,5 @@ GRANT EXECUTE ON FUNCTION
 TO authenticated;
 
 -- =====================================================
--- END OF WITHDRAWAL PROCESSING FUNCTIONS
+-- END OF WEALTHORA TASK WITHDRAWALS
 -- =====================================================
