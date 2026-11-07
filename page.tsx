@@ -1,0 +1,1 @@
+import {Shell,PageTitle} from '@/components/shell';export default function Support(){return <Shell><PageTitle title="Customer support" subtitle="Get help with your account and transactions."/><div className="panel"><p className="muted">Support tickets and secure conversations will appear here once the support service is connected.</p></div></Shell>}
