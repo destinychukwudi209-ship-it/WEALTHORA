@@ -140,4 +140,183 @@ on public.deposit_accounts
 for each row
 execute function public.audit_deposit_account_changes();
 
+-- ==========================================
+-- WEALTHORA SECURITY CORRECTIONS
+-- ==========================================
+
+-- Enable RLS on tables that were missing it.
+ALTER TABLE public.investment_plans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.promo_codes ENABLE ROW LEVEL SECURITY;
+
+-- Remove unsafe customer write policies.
+DROP POLICY IF EXISTS profile_self_update ON public.profiles;
+DROP POLICY IF EXISTS notification_self_all ON public.notifications;
+DROP POLICY IF EXISTS support_ticket_self_all ON public.support_tickets;
+
+-- Customers can only read their own profile.
+CREATE POLICY profile_self_read
+ON public.profiles FOR SELECT
+TO authenticated
+USING (id = auth.uid());
+
+-- Customers can only read their own notifications.
+CREATE POLICY notification_self_read
+ON public.notifications FOR SELECT
+TO authenticated
+USING (user_id = auth.uid());
+
+-- Customers can only mark their own notifications as read.
+CREATE POLICY notification_self_update
+ON public.notifications FOR UPDATE
+TO authenticated
+USING (user_id = auth.uid())
+WITH CHECK (user_id = auth.uid());
+
+-- Customers can read and create their own support tickets.
+CREATE POLICY support_ticket_self_read
+ON public.support_tickets FOR SELECT
+TO authenticated
+USING (user_id = auth.uid());
+
+CREATE POLICY support_ticket_self_insert
+ON public.support_tickets FOR INSERT
+TO authenticated
+WITH CHECK (
+  user_id = auth.uid()
+  AND status = 'open'
+);
+
+-- Remove broad table permissions before granting limited access.
+REVOKE ALL ON TABLE
+  public.profiles,
+  public.ledger_accounts,
+  public.ledger_entries,
+  public.transactions,
+  public.investments,
+  public.referrals,
+  public.promo_redemptions,
+  public.notifications,
+  public.support_tickets,
+  public.audit_logs,
+  public.login_events,
+  public.user_sessions,
+  public.admin_action_approvals,
+  public.investment_plans,
+  public.promo_codes,
+  public.deposit_accounts
+FROM anon, authenticated;
+
+-- Customers may read selected profile fields.
+-- The transaction PIN hash is deliberately excluded.
+GRANT SELECT (
+  id, full_name, phone, role, status,
+  email_verified_at, phone_verified_at,
+  two_factor_enabled, created_at, updated_at
+) ON public.profiles TO authenticated;
+
+-- Customers may update only their name and phone.
+GRANT UPDATE (full_name, phone)
+ON public.profiles TO authenticated;
+
+-- Customer-owned financial records are read-only.
+GRANT SELECT ON
+  public.ledger_accounts,
+  public.ledger_entries,
+  public.transactions,
+  public.investments,
+  public.referrals,
+  public.promo_redemptions
+TO authenticated;
+
+-- Notification access is limited.
+GRANT SELECT ON public.notifications TO authenticated;
+GRANT UPDATE (read_at) ON public.notifications TO authenticated;
+
+-- Support tickets: customers can read and submit, not approve or close.
+GRANT SELECT, INSERT
+ON public.support_tickets TO authenticated;
+
+-- Customers can view their own sessions.
+GRANT SELECT ON public.user_sessions TO authenticated;
+
+-- Customers can view active deposit bank accounts.
+-- Existing admin policy controls authorized management.
+GRANT SELECT, INSERT, UPDATE, DELETE
+ON public.deposit_accounts TO authenticated;
+
+-- No direct customer access to internal security or admin records.
+REVOKE ALL ON
+  public.audit_logs,
+  public.login_events,
+  public.admin_action_approvals,
+  public.investment_plans,
+  public.promo_codes
+FROM anon, authenticated;
+
+-- Correct deposit-account audit trigger for INSERT, UPDATE and DELETE.
+DROP TRIGGER IF EXISTS deposit_account_audit_trigger
+ON public.deposit_accounts;
+
+CREATE OR REPLACE FUNCTION public.audit_deposit_account_changes()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  target_id text;
+  bank text;
+  account text;
+  number_last4 text;
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    target_id := OLD.id::text;
+    bank := OLD.bank_name;
+    account := OLD.account_name;
+    number_last4 := right(OLD.account_number, 4);
+  ELSE
+    target_id := NEW.id::text;
+    bank := NEW.bank_name;
+    account := NEW.account_name;
+    number_last4 := right(NEW.account_number, 4);
+  END IF;
+
+  INSERT INTO public.audit_logs (
+    actor_id, action, target_type, target_id, metadata
+  )
+  VALUES (
+    auth.uid(),
+    'deposit_account_' || lower(TG_OP),
+    'deposit_account',
+    target_id,
+    jsonb_build_object(
+      'bank_name', bank,
+      'account_name', account,
+      'account_number_last4', number_last4,
+      'operation', TG_OP
+    )
+  );
+
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION
+  public.audit_deposit_account_changes()
+FROM PUBLIC, anon, authenticated;
+
+CREATE TRIGGER deposit_account_audit_trigger
+AFTER INSERT OR UPDATE OR DELETE
+ON public.deposit_accounts
+FOR EACH ROW
+EXECUTE FUNCTION public.audit_deposit_account_changes();
+
+-- IMPORTANT:
+-- Financial records must only be changed by trusted server-side
+-- operations. Never expose the Supabase service-role key in a browser.
+
 
