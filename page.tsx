@@ -1,0 +1,1 @@
+import {Shell,PageTitle} from '@/components/shell';export default function Profile(){return <Shell><PageTitle title="My profile" subtitle="Personal details, verification and account status."/><div className="panel"><p className="muted">Complete identity verification through the configured KYC provider.</p></div></Shell>}
