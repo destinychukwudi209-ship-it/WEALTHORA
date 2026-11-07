@@ -481,6 +481,8 @@ USING (user_id = auth.uid());
 
 
 -- -----------------------------------------------------
+
+-- -----------------------------------------------------
 -- 16. TABLE PERMISSIONS
 -- -----------------------------------------------------
 
@@ -534,11 +536,11 @@ ON public.support_tickets TO authenticated;
 -- Customers can view withdrawal history.
 GRANT SELECT ON public.withdrawal_requests TO authenticated;
 
--- RLS controls which deposit accounts customers and admins see.
+-- Deposit accounts: RLS controls customer and admin access.
 GRANT SELECT, INSERT, UPDATE, DELETE
 ON public.deposit_accounts TO authenticated;
 
--- Customers can view their own active sessions.
+-- Customers can view their own sessions.
 GRANT SELECT ON public.user_sessions TO authenticated;
 
 -- Internal tables remain inaccessible to customers.
@@ -549,33 +551,7 @@ REVOKE ALL ON
   public.promo_codes
 FROM PUBLIC, anon, authenticated;
 
-
--- Notification read and read-status update only.
-GRANT SELECT ON public.notifications TO authenticated;
-GRANT UPDATE (read_at) ON public.notifications TO authenticated;
-
--- Customers can create and read their own support tickets.
-GRANT SELECT ON public.support_tickets TO authenticated;
-GRANT INSERT (user_id,subject)
-ON public.support_tickets TO authenticated;
-
--- Customers can view their own withdrawal history only.
-GRANT SELECT ON public.withdrawal_requests TO authenticated;
-
--- Deposit accounts: RLS separates customer and admin actions.
-GRANT SELECT, INSERT, UPDATE, DELETE
-ON public.deposit_accounts TO authenticated;
-
--- Customers can view their own active sessions.
-GRANT SELECT ON public.user_sessions TO authenticated;
-
--- Internal tables have no customer permissions.
-REVOKE ALL ON
-  public.audit_logs,
-  public.login_events,
-  public.admin_action_approvals,
-  public.promo_codes
-FROM PUBLIC, anon, authenticated;
+-- -----------------------------------------------------
 
 -- -----------------------------------------------------
 -- 17. DEPOSIT ACCOUNT AUDIT TRIGGER
