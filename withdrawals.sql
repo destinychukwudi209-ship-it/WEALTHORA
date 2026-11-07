@@ -31,6 +31,7 @@ USING (
 -- 1. CUSTOMER REQUESTS A TASK WITHDRAWAL
 -- -----------------------------------------------------
 
+
 CREATE OR REPLACE FUNCTION public.request_task_withdrawal(
   p_amount numeric,
   p_bank_name text,
@@ -53,6 +54,17 @@ BEGIN
 
   IF v_user_id IS NULL THEN
     RAISE EXCEPTION 'You must sign in first.';
+  END IF;
+
+  -- Only active customers may withdraw.
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.profiles
+    WHERE id = v_user_id
+      AND status = 'active'
+      AND role = 'customer'
+  ) THEN
+    RAISE EXCEPTION 'Your account is not eligible for withdrawals.';
   END IF;
 
   v_local_time := pg_catalog.now() AT TIME ZONE 'Africa/Lagos';
@@ -82,7 +94,6 @@ BEGIN
     RAISE EXCEPTION 'One or more bank details are too long.';
   END IF;
 
-  -- Lock the Task Balance account to serialize withdrawal requests.
   SELECT id
   INTO v_account_id
   FROM public.ledger_accounts
@@ -126,7 +137,6 @@ BEGIN
   )
   RETURNING id INTO v_request_id;
 
-  -- Hold the amount immediately so it cannot be spent twice.
   INSERT INTO public.ledger_entries (
     account_id, reference, entry_type, amount,
     category, status, idempotency_key, description
@@ -153,6 +163,7 @@ BEGIN
   RETURN v_request_id;
 END;
 $$;
+
 
 -- -----------------------------------------------------
 -- 2. ADMIN APPROVES OR REJECTS A REQUEST
