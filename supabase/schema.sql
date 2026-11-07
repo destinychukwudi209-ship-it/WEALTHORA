@@ -388,6 +388,7 @@ DROP POLICY IF EXISTS deposit_accounts_customer_read ON public.deposit_accounts;
 DROP POLICY IF EXISTS deposit_accounts_admin_manage ON public.deposit_accounts;
 DROP POLICY IF EXISTS session_self_read ON public.user_sessions;
 
+
 -- -----------------------------------------------------
 -- 15. CUSTOMER READ POLICIES
 -- -----------------------------------------------------
@@ -404,8 +405,10 @@ CREATE POLICY ledger_entry_self_read
 ON public.ledger_entries FOR SELECT TO authenticated
 USING (
   EXISTS (
-    SELECT 1 FROM public.ledger_accounts a
-    WHERE a.id = account_id AND a.user_id = auth.uid()
+    SELECT 1
+    FROM public.ledger_accounts a
+    WHERE a.id = public.ledger_entries.account_id
+      AND a.user_id = auth.uid()
   )
 );
 
@@ -424,7 +427,8 @@ USING (user_id = auth.uid());
 CREATE POLICY referral_participant_read
 ON public.referrals FOR SELECT TO authenticated
 USING (
-  referrer_id = auth.uid() OR referred_user_id = auth.uid()
+  referrer_id = auth.uid()
+  OR referred_user_id = auth.uid()
 );
 
 CREATE POLICY promo_redemption_self_read
@@ -446,7 +450,10 @@ USING (user_id = auth.uid());
 
 CREATE POLICY support_ticket_self_insert
 ON public.support_tickets FOR INSERT TO authenticated
-WITH CHECK (user_id = auth.uid() AND status = 'open');
+WITH CHECK (
+  user_id = auth.uid()
+  AND status = 'open'
+);
 
 CREATE POLICY withdrawal_self_read
 ON public.withdrawal_requests FOR SELECT TO authenticated
@@ -460,17 +467,19 @@ CREATE POLICY deposit_accounts_admin_manage
 ON public.deposit_accounts FOR ALL TO authenticated
 USING (
   EXISTS (
-    SELECT 1 FROM public.profiles p
+    SELECT 1
+    FROM public.profiles p
     WHERE p.id = auth.uid()
-      AND p.role IN ('admin','super_admin')
+      AND p.role IN ('admin', 'super_admin')
       AND p.status = 'active'
   )
 )
 WITH CHECK (
   EXISTS (
-    SELECT 1 FROM public.profiles p
+    SELECT 1
+    FROM public.profiles p
     WHERE p.id = auth.uid()
-      AND p.role IN ('admin','super_admin')
+      AND p.role IN ('admin', 'super_admin')
       AND p.status = 'active'
   )
 );
@@ -478,6 +487,10 @@ WITH CHECK (
 CREATE POLICY session_self_read
 ON public.user_sessions FOR SELECT TO authenticated
 USING (user_id = auth.uid());
+
+-- -----------------------------------------------------
+-- END OF SECTION 15
+-- -----------------------------------------------------
 
 
 -- -----------------------------------------------------
