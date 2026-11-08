@@ -21,12 +21,16 @@ export default function Register() {
     setMessage("");
     setSuccess(false);
 
-    if (password.length < 12 ||
+    if (
+      password.length < 12 ||
       !/[A-Z]/.test(password) ||
       !/[a-z]/.test(password) ||
       !/[0-9]/.test(password) ||
-      !/[^A-Za-z0-9]/.test(password)) {
-      setMessage("Password must contain at least 12 characters, including uppercase, lowercase, a number and a symbol.");
+      !/[^A-Za-z0-9]/.test(password)
+    ) {
+      setMessage(
+        "Password must contain at least 12 characters, including uppercase, lowercase, a number and a symbol."
+      );
       return;
     }
 
@@ -44,7 +48,7 @@ export default function Register() {
         data: {
           full_name: fullName.trim(),
         },
-        emailRedirectTo: `${window.location.origin}/login`,
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
 
@@ -56,7 +60,9 @@ export default function Register() {
     }
 
     setSuccess(true);
-    setMessage("Registration submitted. Please check your email for the verification link before signing in.");
+    setMessage(
+      "Registration submitted. Please check your email for the verification link before signing in."
+    );
   }
 
   const fieldClass =
@@ -157,7 +163,11 @@ export default function Register() {
           disabled={loading || success}
           className="w-full rounded-2xl bg-[#b7ff36] px-5 py-5 text-xl font-bold text-[#071006] shadow-lg transition hover:bg-[#a8f329] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loading ? "Creating Account..." : success ? "Registration Submitted" : "Create Account"}
+          {loading
+            ? "Creating Account..."
+            : success
+              ? "Registration Submitted"
+              : "Create Account"}
         </button>
 
         {message && (
@@ -182,4 +192,4 @@ export default function Register() {
       </form>
     </main>
   );
-      }
+            }
