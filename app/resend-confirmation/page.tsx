@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
@@ -12,7 +12,7 @@ export default function ResendConfirmation() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleResend(e: React.FormEvent<HTMLFormElement>) {
+  async function handleResend(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setMessage("");
@@ -21,7 +21,7 @@ export default function ResendConfirmation() {
       type: "signup",
       email: email.trim(),
       options: {
-        emailRedirectTo: `${window.location.origin}/login`,
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
 
@@ -92,5 +92,4 @@ export default function ResendConfirmation() {
       </form>
     </main>
   );
-      }
-          
+}
