@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const links = [
   { href: "/dashboard", label: "Overview", icon: "⌂" },
@@ -21,6 +21,22 @@ const links = [
 export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+
+  useEffect(() => {
+    function updateConnection() {
+      setIsOnline(navigator.onLine);
+    }
+
+    updateConnection();
+    window.addEventListener("online", updateConnection);
+    window.addEventListener("offline", updateConnection);
+
+    return () => {
+      window.removeEventListener("online", updateConnection);
+      window.removeEventListener("offline", updateConnection);
+    };
+  }, []);
 
   function closeMenu() {
     setMenuOpen(false);
@@ -34,6 +50,47 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-[#050806] text-white">
+      {!isOnline && (
+        <div
+          className="fixed inset-0 z-[100] flex min-h-screen items-center justify-center bg-[#050806] px-6 text-center"
+          role="alert"
+          aria-live="assertive"
+        >
+          <div className="w-full max-w-md rounded-3xl border border-[#426b37] bg-[#09170e] p-8 shadow-2xl">
+            <div className="mx-auto mb-5 grid h-20 w-20 place-items-center rounded-full border border-red-400/40 bg-red-500/10 text-4xl">
+              📡
+            </div>
+
+            <h1 className="text-2xl font-extrabold text-white">
+              You are offline
+            </h1>
+
+            <p className="mt-4 text-sm leading-7 text-gray-300">
+              Your internet connection is not available. Please turn on your
+              mobile data or connect to Wi-Fi to continue using WEALTHORA.
+            </p>
+
+            <div className="mt-6 rounded-xl border border-[#31583a] bg-[#10291a] p-4">
+              <p className="text-sm font-bold text-[#b7ff35]">
+                Connection required
+              </p>
+              <p className="mt-2 text-xs leading-5 text-gray-400">
+                WEALTHORA will become available again when your device reports
+                that it is online.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsOnline(navigator.onLine)}
+              className="mt-6 w-full rounded-xl bg-[#b7ff35] px-5 py-4 font-extrabold text-[#071b10]"
+            >
+              Check connection again
+            </button>
+          </div>
+        </div>
+      )}
+
       <header className="sticky top-0 z-40 border-b border-[#24452b] bg-[#071b10]/95 text-white shadow-lg shadow-black/30 backdrop-blur">
         <div className="mx-auto flex max-w-[1500px] items-center justify-between px-4 py-4 sm:px-6">
           <Link
@@ -219,4 +276,4 @@ export function PageTitle({
       </p>
     </div>
   );
-      }
+            }
