@@ -1,6 +1,10 @@
 
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Shell, PageTitle } from "@/components/shell";
+import { createClient } from "@/lib/supabase/client";
 
 const balances = [
   {
@@ -34,6 +38,29 @@ const shortcuts = [
 ];
 
 export default function Dashboard() {
+  const [customerName, setCustomerName] = useState("there");
+
+  useEffect(() => {
+    const supabase = createClient();
+
+    async function loadCustomerName() {
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        const name =
+          user.user_metadata?.full_name ||
+          user.user_metadata?.name ||
+          user.email?.split("@")[0];
+
+        if (name) {
+          setCustomerName(name);
+        }
+      }
+    }
+
+    loadCustomerName();
+  }, []);
+
   return (
     <Shell>
       <div className="mb-8 overflow-hidden rounded-3xl border border-[#31583a] bg-gradient-to-br from-[#102d1b] via-[#0b2114] to-[#07100a] p-6 text-white shadow-2xl shadow-black/30 sm:p-8">
@@ -47,28 +74,28 @@ export default function Dashboard() {
         </div>
 
         <p className="mt-8 text-sm text-gray-300">
-          Welcome to your wealth overview
+          Welcome to WEALTHORA
         </p>
 
         <h1 className="mt-2 max-w-xl text-3xl font-extrabold leading-tight sm:text-4xl">
-          Your financial journey, all in one place.
+          Welcome, {customerName}!
         </h1>
 
         <p className="mt-3 max-w-lg text-sm leading-6 text-gray-300">
-          Manage your balances, follow your investments and keep track of your account activity.
+          Your financial journey starts here. Manage your balances, follow your investments and keep track of your account activity.
         </p>
 
         <div className="mt-7 flex flex-wrap gap-3">
           <Link
             href="/wallet"
-            className="rounded-xl bg-[#b7ff35] px-5 py-3 text-sm font-extrabold text-[#071b10] transition hover:bg-lime-300"
+            className="rounded-xl bg-[#b7ff35] px-5 py-3 text-sm font-extrabold text-[#071b10]"
           >
             Open my wallet
           </Link>
 
           <Link
             href="/invest"
-            className="rounded-xl border border-[#55745a] px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+            className="rounded-xl border border-[#55745a] px-5 py-3 text-sm font-semibold text-white"
           >
             Explore plans
           </Link>
@@ -85,7 +112,7 @@ export default function Dashboard() {
           <Link
             href={item.href}
             key={item.title}
-            className="group rounded-2xl border border-[#24452b] bg-[#0b170e] p-5 shadow-lg shadow-black/20 transition hover:-translate-y-1 hover:border-[#b7ff35]/60"
+            className="group rounded-2xl border border-[#24452b] bg-[#0b170e] p-5 shadow-lg transition hover:border-[#b7ff35]/60"
           >
             <div className="flex items-center justify-between">
               <span className="text-sm font-semibold text-gray-300">
@@ -96,7 +123,7 @@ export default function Dashboard() {
               </span>
             </div>
 
-            <p className="mt-5 text-3xl font-extrabold tracking-tight text-white">
+            <p className="mt-5 text-3xl font-extrabold text-white">
               {item.amount}
             </p>
 
@@ -112,10 +139,8 @@ export default function Dashboard() {
       </div>
 
       <div className="mt-8 grid gap-5 xl:grid-cols-2">
-        <section className="rounded-2xl border border-[#24452b] bg-[#0b170e] p-5 shadow-lg shadow-black/20">
-          <h2 className="text-lg font-bold text-white">
-            Quick actions
-          </h2>
+        <section className="rounded-2xl border border-[#24452b] bg-[#0b170e] p-5">
+          <h2 className="text-lg font-bold text-white">Quick actions</h2>
 
           <p className="mt-1 text-sm text-gray-400">
             Get to the services you use most.
@@ -126,7 +151,7 @@ export default function Dashboard() {
               <Link
                 href={item.href}
                 key={item.label}
-                className="flex items-center gap-3 rounded-xl border border-[#24452b] bg-[#102319] p-4 transition hover:border-[#b7ff35]/60 hover:bg-[#173c25]"
+                className="flex items-center gap-3 rounded-xl border border-[#24452b] bg-[#102319] p-4"
               >
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#24452b] text-lg text-[#b7ff35]">
                   {item.icon}
@@ -169,24 +194,19 @@ export default function Dashboard() {
           </div>
 
           <div className="mt-4 rounded-xl border border-[#24452b] bg-[#0b170e] p-4">
-            <p className="text-sm font-semibold text-white">
-              How it works
-            </p>
-
-            <p className="mt-2 text-sm leading-6 text-gray-300">
-              Requests remain pending until an admin reviews them. Rejected requests are refunded to Task Balance. Approved requests may take up to 3 days to process.
+            <p className="text-sm leading-6 text-gray-300">
+              Dear {customerName}, please allow up to 3 working days for your approved withdrawal to be processed and credited to your bank account.
             </p>
           </div>
         </section>
       </div>
 
-      <section className="mt-6 rounded-2xl border border-[#24452b] bg-[#0b170e] p-5 shadow-lg shadow-black/20">
+      <section className="mt-6 rounded-2xl border border-[#24452b] bg-[#0b170e] p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-bold text-white">
               Recent account activity
             </h2>
-
             <p className="mt-1 text-sm text-gray-400">
               Your latest verified financial transactions.
             </p>
@@ -202,11 +222,9 @@ export default function Dashboard() {
 
         <div className="mt-5 rounded-xl border border-[#24452b] bg-[#09150c] p-6 text-center">
           <span className="text-3xl text-gray-500">⇄</span>
-
           <p className="mt-3 text-sm font-semibold text-white">
             No verified transactions to display
           </p>
-
           <p className="mt-1 text-xs text-gray-400">
             Your account activity will appear here when connected to the financial ledger.
           </p>
@@ -218,4 +236,5 @@ export default function Dashboard() {
       </footer>
     </Shell>
   );
-      }
+  }
+              
