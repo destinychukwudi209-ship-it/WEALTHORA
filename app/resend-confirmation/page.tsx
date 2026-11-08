@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, type FormEvent } from "react";
@@ -6,8 +5,6 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 export default function ResendConfirmation() {
-  const supabase = createClient();
-
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -17,26 +14,34 @@ export default function ResendConfirmation() {
     setLoading(true);
     setMessage("");
 
-    const { error } = await supabase.auth.resend({
-      type: "signup",
-      email: email.trim(),
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
+    try {
+      const supabase = createClient();
 
-    setLoading(false);
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: email.trim(),
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
 
-    if (error) {
+      if (error) {
+        setMessage(
+          "We couldn't send the email right now. Please wait a little and try again."
+        );
+        return;
+      }
+
       setMessage(
-        "We couldn't send the email right now. Please wait a little and try again."
+        "If your account is awaiting verification, a fresh confirmation email has been sent. Check your inbox and spam folder."
       );
-      return;
+    } catch {
+      setMessage(
+        "Unable to send the confirmation email right now. Please try again."
+      );
+    } finally {
+      setLoading(false);
     }
-
-    setMessage(
-      "If your account is awaiting verification, a fresh confirmation email has been sent. Check your inbox and spam folder."
-    );
   }
 
   return (
@@ -49,7 +54,9 @@ export default function ResendConfirmation() {
           <span className="text-[#b7ff36]">WEALTH</span>ORA
         </h1>
 
-        <h2 className="text-2xl font-bold">Resend confirmation email</h2>
+        <h2 className="text-2xl font-bold">
+          Resend confirmation email
+        </h2>
 
         <p className="text-sm text-gray-400">
           Enter the same email address you used when creating your account.
@@ -79,17 +86,23 @@ export default function ResendConfirmation() {
         </button>
 
         {message && (
-          <p role="status" className="rounded-xl bg-[#17251a] p-4 text-sm text-gray-200">
+          <p
+            role="status"
+            className="rounded-xl bg-[#17251a] p-4 text-sm text-gray-200"
+          >
             {message}
           </p>
         )}
 
         <p className="text-center text-sm text-gray-400">
-          <Link href="/login" className="font-semibold text-[#b7ff36]">
+          <Link
+            href="/login"
+            className="font-semibold text-[#b7ff36]"
+          >
             Back to Sign In
           </Link>
         </p>
       </form>
     </main>
   );
-}
+        }
