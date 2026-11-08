@@ -16,6 +16,7 @@ export default function Login() {
 
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
     if (loading) return;
 
     setLoading(true);
@@ -45,11 +46,20 @@ export default function Login() {
 
       router.replace("/dashboard");
       router.refresh();
+
     } catch (error) {
+      console.error("WEALTHORA login error:", error);
+
       if (error instanceof Error && error.message === "TIMEOUT") {
-        setMessage("Sign-in is taking too long. Please check your internet connection and try again.");
+        setMessage(
+          "Sign-in timed out. Check your internet connection and try again."
+        );
       } else {
-        setMessage("Unable to sign in right now. Please try again.");
+        setMessage(
+          error instanceof Error
+            ? error.message
+            : "Unknown login error. Please try again."
+        );
       }
     } finally {
       if (timeoutId) clearTimeout(timeoutId);
@@ -59,16 +69,23 @@ export default function Login() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#050806] px-4 py-10 text-white">
-      <form onSubmit={handleLogin} className="w-full max-w-[610px] rounded-[30px] border border-[#293b27] bg-[#0e1712] px-7 py-10 sm:px-10">
+      <form
+        onSubmit={handleLogin}
+        className="w-full max-w-[610px] rounded-[30px] border border-[#293b27] bg-[#0e1712] px-7 py-10 sm:px-10"
+      >
         <div className="mb-12 text-center">
           <h1 className="text-4xl font-black tracking-[0.08em]">
             <span className="text-[#b7ff36]">WEALTH</span>ORA
           </h1>
-          <p className="mt-5 text-[#929b94]">Your financial growth platform</p>
+          <p className="mt-5 text-[#929b94]">
+            Your financial growth platform
+          </p>
         </div>
 
         <h2 className="text-3xl font-bold">Welcome Back</h2>
-        <p className="mb-8 mt-3 text-[#929b94]">Sign in to access your account.</p>
+        <p className="mb-8 mt-3 text-[#929b94]">
+          Sign in to access your account.
+        </p>
 
         <div className="grid gap-6">
           <label className="grid gap-3 font-medium">
@@ -107,7 +124,10 @@ export default function Login() {
         </button>
 
         {message && (
-          <p role="alert" className="mt-4 rounded-xl bg-red-950/40 p-3 text-sm text-red-300">
+          <p
+            role="alert"
+            className="mt-4 rounded-xl bg-red-950/40 p-3 text-sm text-red-300"
+          >
             {message}
           </p>
         )}
@@ -116,6 +136,7 @@ export default function Login() {
           <Link href="/forgot-password" className="text-[#b7ff36]">
             Forgot Password?
           </Link>
+
           <Link href="/register" className="text-[#b7ff36]">
             Create Account
           </Link>
@@ -123,4 +144,4 @@ export default function Login() {
       </form>
     </main>
   );
-        }
+            }
