@@ -229,5 +229,5 @@ export default function ForgotPasswordPage() {
       </section>
     </main>
   );
-                    }
-              
+      }
+            
