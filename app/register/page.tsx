@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, type FormEvent } from "react";
@@ -6,8 +5,6 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 export default function Register() {
-  const supabase = createClient();
-
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -41,28 +38,34 @@ export default function Register() {
 
     setLoading(true);
 
-    const { error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-      options: {
-        data: {
-          full_name: fullName.trim(),
+    try {
+      const supabase = createClient();
+
+      const { error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: {
+            full_name: fullName.trim(),
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
+      });
 
-    setLoading(false);
+      if (error) {
+        setMessage(error.message);
+        return;
+      }
 
-    if (error) {
-      setMessage(error.message);
-      return;
+      setSuccess(true);
+      setMessage(
+        "Registration submitted. Please check your email for the verification link before signing in."
+      );
+    } catch {
+      setMessage("Unable to register right now. Please try again.");
+    } finally {
+      setLoading(false);
     }
-
-    setSuccess(true);
-    setMessage(
-      "Registration submitted. Please check your email for the verification link before signing in."
-    );
   }
 
   const fieldClass =
@@ -192,4 +195,4 @@ export default function Register() {
       </form>
     </main>
   );
-            }
+  }
