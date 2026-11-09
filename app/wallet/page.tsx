@@ -32,15 +32,19 @@ export default function Wallet() {
       />
 
       <div className="mb-6 rounded-3xl bg-gradient-to-br from-[#08291c] to-[#10432d] p-6 text-white shadow-xl">
-        <p className="text-sm text-emerald-100">
-          WEALTHORA WALLET
-        </p>
+        <p className="text-sm text-emerald-100">WEALTHORA WALLET</p>
         <h2 className="mt-3 text-2xl font-extrabold">
           Manage your balances
         </h2>
         <p className="mt-2 text-sm leading-6 text-emerald-100/80">
           View your funds, track earnings and manage eligible withdrawal requests securely.
         </p>
+        <Link
+          href="/deposit"
+          className="mt-5 inline-block rounded-xl bg-white px-6 py-3 font-bold text-[#0b2118]"
+        >
+          + Deposit Funds
+        </Link>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -67,7 +71,7 @@ export default function Wallet() {
           Main Balance
         </h2>
         <p className="mt-2 text-sm leading-6 text-slate-500">
-          Main Balance is the balance used to purchase WEALTHORA investment plans. Task Balance and Affiliate Balance cannot be substituted for it.
+          Main Balance is used to purchase WEALTHORA investment plans. Task Balance and Affiliate Balance cannot be substituted for it.
         </p>
         <Link
           href="/invest"
