@@ -1,4 +1,3 @@
-
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { Shell, PageTitle } from "@/components/shell";
@@ -13,7 +12,7 @@ const modules = [
   { name: "Referral review", description: "Review referral activity and commissions.", href: null },
   { name: "Promo campaigns", description: "Manage promotional campaigns.", href: null },
   { name: "Announcements", description: "Publish platform announcements.", href: null },
-  { name: "Support inbox", description: "Manage customer support requests.", href: null },
+  { name: "Support inbox", description: "View customer tickets and reply to support requests.", href: "/admin/support" },
   { name: "Fraud monitoring", description: "Review suspicious account activity.", href: null },
   { name: "Financial reconciliation", description: "Review and reconcile financial records.", href: null },
   { name: "Audit logs", description: "Review administrative activity records.", href: null },
@@ -58,59 +57,39 @@ export default async function Admin() {
       </h2>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Link
-          href="/admin/settings"
-          className="rounded-2xl border border-lime-500/40 bg-[#10291a] p-5 transition hover:border-lime-300"
-        >
+        <Link href="/admin/settings" className="rounded-2xl border border-lime-500/40 bg-[#10291a] p-5 transition hover:border-lime-300">
           <h3 className="font-bold text-lime-300">Admin Settings</h3>
-          <p className="mt-2 text-xs text-gray-300">
-            Manage platform details and administrator notification preferences.
-          </p>
-          <p className="mt-4 text-sm font-bold text-white">
-            Open admin settings →
-          </p>
+          <p className="mt-2 text-xs text-gray-300">Manage platform details and administrator notification preferences.</p>
+          <p className="mt-4 text-sm font-bold text-white">Open admin settings →</p>
         </Link>
 
-        <Link
-          href="/admin/deposit-accounts"
-          className="rounded-2xl border border-lime-500/40 bg-[#10291a] p-5 transition hover:border-lime-300"
-        >
+        <Link href="/admin/deposit-accounts" className="rounded-2xl border border-lime-500/40 bg-[#10291a] p-5 transition hover:border-lime-300">
           <h3 className="font-bold text-lime-300">Deposit bank accounts</h3>
-          <p className="mt-2 text-xs text-gray-300">
-            View and manage deposit account information.
-          </p>
-          <p className="mt-4 text-sm font-bold text-white">
-            Open deposit accounts →
-          </p>
+          <p className="mt-2 text-xs text-gray-300">View and manage deposit account information.</p>
+          <p className="mt-4 text-sm font-bold text-white">Open deposit accounts →</p>
         </Link>
 
-        <Link
-          href="/admin/users"
-          className="rounded-2xl border border-lime-500/40 bg-[#10291a] p-5 transition hover:border-lime-300"
-        >
+        <Link href="/admin/users" className="rounded-2xl border border-lime-500/40 bg-[#10291a] p-5 transition hover:border-lime-300">
           <h3 className="font-bold text-lime-300">User management</h3>
-          <p className="mt-2 text-xs text-gray-300">
-            View customer accounts and manage their account status.
-          </p>
-          <p className="mt-4 text-sm font-bold text-white">
-            Open user management →
-          </p>
+          <p className="mt-2 text-xs text-gray-300">View customer accounts and manage their account status.</p>
+          <p className="mt-4 text-sm font-bold text-white">Open user management →</p>
         </Link>
 
-        {modules.map((module) => (
-          <div
-            key={module.name}
-            className="rounded-2xl border border-[#24452b] bg-[#09170e] p-5"
-          >
-            <h3 className="font-bold text-white">{module.name}</h3>
-            <p className="mt-2 text-xs text-gray-400">
-              {module.description}
-            </p>
-            <p className="mt-4 text-xs font-semibold text-lime-300">
-              Coming soon
-            </p>
-          </div>
-        ))}
+        {modules.map((module) =>
+          module.href ? (
+            <Link key={module.name} href={module.href} className="rounded-2xl border border-lime-500/40 bg-[#10291a] p-5 transition hover:border-lime-300">
+              <h3 className="font-bold text-lime-300">{module.name}</h3>
+              <p className="mt-2 text-xs text-gray-300">{module.description}</p>
+              <p className="mt-4 text-sm font-bold text-white">Open support inbox →</p>
+            </Link>
+          ) : (
+            <div key={module.name} className="rounded-2xl border border-[#24452b] bg-[#09170e] p-5">
+              <h3 className="font-bold text-white">{module.name}</h3>
+              <p className="mt-2 text-xs text-gray-400">{module.description}</p>
+              <p className="mt-4 text-xs font-semibold text-lime-300">Coming soon</p>
+            </div>
+          )
+        )}
       </div>
     </Shell>
   );
