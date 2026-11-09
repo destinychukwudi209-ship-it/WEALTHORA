@@ -1,13 +1,12 @@
 
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 type Customer = {
   id: string;
   full_name: string | null;
-  phone: string | null;
   role: string;
   status: string;
   created_at: string;
@@ -29,71 +28,98 @@ export default function UserManagement({
   const [filter, setFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState("");
-  const [message, setMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
-  async function loadUsers() {
+  const loadUsers = useCallback(async () => {
     setLoading(true);
-    setMessage("");
+    setErrorMessage("");
 
     const { data, error } = await supabase
       .from("profiles")
-      .select("id,full_name,phone,role,status,created_at")
+      .select("id,full_name,role,status,created_at")
+      .eq("role", "customer")
       .order("created_at", { ascending: false });
 
     if (error) {
-      setMessage("Unable to load accounts. Check your permissions and try again.");
       setUsers([]);
+      setErrorMessage(
+        `Database error (${error.code || "unknown"}): ${error.message}`
+      );
     } else {
       setUsers((data || []) as Customer[]);
     }
 
     setLoading(false);
-  }
+  }, [supabase]);
 
   useEffect(() => {
-    if (currentRole === "admin" || currentRole === "super_admin") {
-      loadUsers();
-    } else {
+    if (currentRole !== "admin" && currentRole !== "super_admin") {
       setLoading(false);
+      return;
     }
-  }, [currentRole]);
+
+    loadUsers();
+
+    const refreshTimer = window.setInterval(() => {
+      loadUsers();
+    }, 20000);
+
+    return () => window.clearInterval(refreshTimer);
+  }, [currentRole, loadUsers]);
 
   const customers = useMemo(() => {
+    const term = search.trim().toLowerCase();
+
     return users.filter((user) => {
-      const matchesFilter = filter === "all" || user.status === filter;
-      const term = search.toLowerCase();
+      const matchesFilter =
+        filter === "all" || user.status === filter;
 
       const matchesSearch =
         (user.full_name || "").toLowerCase().includes(term) ||
-        (user.phone || "").toLowerCase().includes(term) ||
         user.id.toLowerCase().includes(term);
 
-      return user.role === "customer" && matchesFilter && matchesSearch;
+      return matchesFilter && matchesSearch;
     });
   }, [users, search, filter]);
 
   async function changeStatus(user: Customer, newStatus: string) {
-    if (user.id === currentUserId || user.role !== "customer") return;
+    if (
+      user.id === currentUserId ||
+      user.role !== "customer" ||
+      !statuses.includes(newStatus)
+    ) {
+      return;
+    }
 
     const confirmed = window.confirm(
-      `Change ${user.full_name || "this customer's"} account status to ${newStatus}?`
+      `Change ${user.full_name || "this customer's"} status to ${newStatus}?`
     );
 
     if (!confirmed) return;
 
     setSavingId(user.id);
-    setMessage("");
+    setErrorMessage("");
+    setSuccessMessage("");
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("profiles")
       .update({ status: newStatus })
       .eq("id", user.id)
-      .eq("role", "customer");
+      .eq("role", "customer")
+      .select("id")
+      .maybeSingle();
 
     if (error) {
-      setMessage("Status update failed: " + error.message);
+      setErrorMessage(
+        `Status update failed (${error.code || "unknown"}): ${error.message}`
+      );
+    } else if (!data) {
+      setErrorMessage(
+        "No account was updated. Check your administrator permissions."
+      );
     } else {
-      setMessage("Account status updated successfully.");
+      setSuccessMessage("Customer account status updated.");
       await loadUsers();
     }
 
@@ -108,28 +134,76 @@ export default function UserManagement({
     );
   }
 
+  const activeCount = users.filter((u) => u.status === "active").length;
+  const pendingCount = users.filter((u) => u.status === "pending").length;
+  const restrictedCount = users.filter((u) =>
+    ["frozen", "suspended", "closed"].includes(u.status)
+  ).length;
+
   return (
     <div className="space-y-5">
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          ["Total customers", users.filter((u) => u.role === "customer").length],
-          ["Active", users.filter((u) => u.role === "customer" && u.status === "active").length],
-          ["Pending", users.filter((u) => u.role === "customer" && u.status === "pending").length],
-          ["Restricted", users.filter((u) => u.role === "customer" && ["frozen", "suspended", "closed"].includes(u.status)).length],
+          ["Total customers", users.length],
+          ["Active", activeCount],
+          ["Pending", pendingCount],
+          ["Restricted", restrictedCount],
         ].map(([label, value]) => (
-          <div key={label} className="rounded-xl border border-[#24452b] bg-[#09170e] p-4">
+          <div
+            key={label}
+            className="rounded-xl border border-[#24452b] bg-[#09170e] p-4"
+          >
             <p className="text-xs text-gray-400">{label}</p>
-            <p className="mt-2 text-2xl font-extrabold text-lime-300">{value}</p>
+            <p className="mt-2 text-2xl font-extrabold text-lime-300">
+              {value}
+            </p>
           </div>
         ))}
       </div>
 
       <div className="rounded-2xl border border-[#24452b] bg-[#09170e] p-4">
-        <div className="grid gap-3 sm:grid-cols-2">
+
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-bold text-white">Live customer records</h2>
+            <p className="mt-1 text-xs text-gray-400">
+              Records are retrieved directly from the WEALTHORA database.
+              Automatic refresh every 20 seconds.
+            </p>
+          </div>
+
+          <button
+            onClick={loadUsers}
+            disabled={loading}
+            className="rounded-lg border border-lime-500/40 px-4 py-2 text-xs font-bold text-lime-300 disabled:opacity-50"
+          >
+            {loading ? "Loading..." : "Refresh now"}
+          </button>
+        </div>
+
+        {errorMessage && (
+          <div className="mt-4 rounded-xl border border-red-500/40 bg-red-950/30 p-4">
+            <p className="font-bold text-red-300">
+              Unable to retrieve customer records
+            </p>
+            <p className="mt-2 break-words text-sm text-red-200">
+              {errorMessage}
+            </p>
+          </div>
+        )}
+
+        {successMessage && (
+          <p className="mt-4 rounded-lg border border-green-500/30 bg-green-950/20 p-3 text-sm text-green-300">
+            {successMessage}
+          </p>
+        )}
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search name, phone or account ID"
+            placeholder="Search customer name or account ID"
             className="w-full rounded-xl border border-[#31583a] bg-[#050806] px-4 py-3 text-sm text-white outline-none"
           />
 
@@ -147,44 +221,38 @@ export default function UserManagement({
           </select>
         </div>
 
-        {message && (
-          <p className="mt-4 rounded-lg border border-[#31583a] bg-[#10291a] p-3 text-sm text-lime-200">
-            {message}
+        <h3 className="mt-6 font-bold text-white">
+          Customer accounts ({customers.length})
+        </h3>
+
+        {loading && users.length === 0 ? (
+          <p className="py-8 text-center text-sm text-gray-400">
+            Loading real customer records...
           </p>
-        )}
-
-        <div className="mt-5 flex items-center justify-between gap-3">
-          <h2 className="font-bold text-white">Customer accounts</h2>
-          <button
-            onClick={loadUsers}
-            disabled={loading}
-            className="rounded-lg border border-lime-500/40 px-3 py-2 text-xs font-bold text-lime-300 disabled:opacity-50"
-          >
-            Refresh
-          </button>
-        </div>
-
-        {loading ? (
-          <p className="py-8 text-center text-sm text-gray-400">Loading customer accounts...</p>
-        ) : customers.length === 0 ? (
-          <p className="py-8 text-center text-sm text-gray-400">No customer accounts found.</p>
+        ) : !errorMessage && customers.length === 0 ? (
+          <p className="py-8 text-center text-sm text-gray-400">
+            No customer profile records found yet.
+          </p>
         ) : (
           <div className="mt-4 space-y-3">
             {customers.map((user) => (
-              <div key={user.id} className="rounded-xl border border-[#24452b] bg-[#050806] p-4">
+              <div
+                key={user.id}
+                className="rounded-xl border border-[#24452b] bg-[#050806] p-4"
+              >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h3 className="font-bold text-white">
+                    <h4 className="font-bold text-white">
                       {user.full_name || "Unnamed customer"}
-                    </h3>
-                    <p className="mt-1 text-xs text-gray-400">
-                      {user.phone || "No phone number"}
+                    </h4>
+
+                    <p className="mt-2 break-all text-xs text-gray-400">
+                      Account ID: {user.id}
                     </p>
-                    <p className="mt-1 break-all text-[10px] text-gray-500">
-                      ID: {user.id}
-                    </p>
-                    <p className="mt-1 text-xs text-gray-500">
-                      Joined: {new Date(user.created_at).toLocaleDateString()}
+
+                    <p className="mt-2 text-xs text-gray-500">
+                      Registered:{" "}
+                      {new Date(user.created_at).toLocaleString()}
                     </p>
                   </div>
 
@@ -195,12 +263,15 @@ export default function UserManagement({
 
                 <div className="mt-4">
                   <label className="mb-2 block text-xs text-gray-400">
-                    Change account status
+                    Manage account status
                   </label>
+
                   <select
                     value={user.status}
                     disabled={savingId === user.id}
-                    onChange={(e) => changeStatus(user, e.target.value)}
+                    onChange={(e) =>
+                      changeStatus(user, e.target.value)
+                    }
                     className="w-full rounded-lg border border-[#31583a] bg-[#10291a] px-3 py-3 text-sm text-white disabled:opacity-50"
                   >
                     {statuses.map((status) => (
@@ -209,8 +280,11 @@ export default function UserManagement({
                       </option>
                     ))}
                   </select>
+
                   {savingId === user.id && (
-                    <p className="mt-2 text-xs text-lime-300">Saving...</p>
+                    <p className="mt-2 text-xs text-lime-300">
+                      Saving account status...
+                    </p>
                   )}
                 </div>
               </div>
@@ -220,5 +294,5 @@ export default function UserManagement({
       </div>
     </div>
   );
-               }
+}
   
