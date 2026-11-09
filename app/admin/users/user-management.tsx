@@ -1,0 +1,224 @@
+
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+
+type Customer = {
+  id: string;
+  full_name: string | null;
+  phone: string | null;
+  role: string;
+  status: string;
+  created_at: string;
+};
+
+const statuses = ["pending", "active", "frozen", "suspended", "closed"];
+
+export default function UserManagement({
+  currentUserId,
+  currentRole,
+}: {
+  currentUserId: string;
+  currentRole: string;
+}) {
+  const supabase = createClient();
+
+  const [users, setUsers] = useState<Customer[]>([]);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
+  const [savingId, setSavingId] = useState("");
+  const [message, setMessage] = useState("");
+
+  async function loadUsers() {
+    setLoading(true);
+    setMessage("");
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id,full_name,phone,role,status,created_at")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      setMessage("Unable to load accounts. Check your permissions and try again.");
+      setUsers([]);
+    } else {
+      setUsers((data || []) as Customer[]);
+    }
+
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    if (currentRole === "admin" || currentRole === "super_admin") {
+      loadUsers();
+    } else {
+      setLoading(false);
+    }
+  }, [currentRole]);
+
+  const customers = useMemo(() => {
+    return users.filter((user) => {
+      const matchesFilter = filter === "all" || user.status === filter;
+      const term = search.toLowerCase();
+
+      const matchesSearch =
+        (user.full_name || "").toLowerCase().includes(term) ||
+        (user.phone || "").toLowerCase().includes(term) ||
+        user.id.toLowerCase().includes(term);
+
+      return user.role === "customer" && matchesFilter && matchesSearch;
+    });
+  }, [users, search, filter]);
+
+  async function changeStatus(user: Customer, newStatus: string) {
+    if (user.id === currentUserId || user.role !== "customer") return;
+
+    const confirmed = window.confirm(
+      `Change ${user.full_name || "this customer's"} account status to ${newStatus}?`
+    );
+
+    if (!confirmed) return;
+
+    setSavingId(user.id);
+    setMessage("");
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ status: newStatus })
+      .eq("id", user.id)
+      .eq("role", "customer");
+
+    if (error) {
+      setMessage("Status update failed: " + error.message);
+    } else {
+      setMessage("Account status updated successfully.");
+      await loadUsers();
+    }
+
+    setSavingId("");
+  }
+
+  if (currentRole !== "admin" && currentRole !== "super_admin") {
+    return (
+      <div className="rounded-xl border border-red-500/30 bg-red-950/20 p-5 text-red-300">
+        You do not have permission to manage customer accounts.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[
+          ["Total customers", users.filter((u) => u.role === "customer").length],
+          ["Active", users.filter((u) => u.role === "customer" && u.status === "active").length],
+          ["Pending", users.filter((u) => u.role === "customer" && u.status === "pending").length],
+          ["Restricted", users.filter((u) => u.role === "customer" && ["frozen", "suspended", "closed"].includes(u.status)).length],
+        ].map(([label, value]) => (
+          <div key={label} className="rounded-xl border border-[#24452b] bg-[#09170e] p-4">
+            <p className="text-xs text-gray-400">{label}</p>
+            <p className="mt-2 text-2xl font-extrabold text-lime-300">{value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-2xl border border-[#24452b] bg-[#09170e] p-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search name, phone or account ID"
+            className="w-full rounded-xl border border-[#31583a] bg-[#050806] px-4 py-3 text-sm text-white outline-none"
+          />
+
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="w-full rounded-xl border border-[#31583a] bg-[#050806] px-4 py-3 text-sm text-white"
+          >
+            <option value="all">All account statuses</option>
+            {statuses.map((status) => (
+              <option key={status} value={status}>
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {message && (
+          <p className="mt-4 rounded-lg border border-[#31583a] bg-[#10291a] p-3 text-sm text-lime-200">
+            {message}
+          </p>
+        )}
+
+        <div className="mt-5 flex items-center justify-between gap-3">
+          <h2 className="font-bold text-white">Customer accounts</h2>
+          <button
+            onClick={loadUsers}
+            disabled={loading}
+            className="rounded-lg border border-lime-500/40 px-3 py-2 text-xs font-bold text-lime-300 disabled:opacity-50"
+          >
+            Refresh
+          </button>
+        </div>
+
+        {loading ? (
+          <p className="py-8 text-center text-sm text-gray-400">Loading customer accounts...</p>
+        ) : customers.length === 0 ? (
+          <p className="py-8 text-center text-sm text-gray-400">No customer accounts found.</p>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {customers.map((user) => (
+              <div key={user.id} className="rounded-xl border border-[#24452b] bg-[#050806] p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-white">
+                      {user.full_name || "Unnamed customer"}
+                    </h3>
+                    <p className="mt-1 text-xs text-gray-400">
+                      {user.phone || "No phone number"}
+                    </p>
+                    <p className="mt-1 break-all text-[10px] text-gray-500">
+                      ID: {user.id}
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Joined: {new Date(user.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+
+                  <span className="rounded-full border border-lime-500/30 px-3 py-1 text-xs font-semibold text-lime-300">
+                    {user.status}
+                  </span>
+                </div>
+
+                <div className="mt-4">
+                  <label className="mb-2 block text-xs text-gray-400">
+                    Change account status
+                  </label>
+                  <select
+                    value={user.status}
+                    disabled={savingId === user.id}
+                    onChange={(e) => changeStatus(user, e.target.value)}
+                    className="w-full rounded-lg border border-[#31583a] bg-[#10291a] px-3 py-3 text-sm text-white disabled:opacity-50"
+                  >
+                    {statuses.map((status) => (
+                      <option key={status} value={status}>
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                  {savingId === user.id && (
+                    <p className="mt-2 text-xs text-lime-300">Saving...</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+               }
+  
