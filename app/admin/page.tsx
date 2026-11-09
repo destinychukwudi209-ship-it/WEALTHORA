@@ -1,4 +1,3 @@
-
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { Shell, PageTitle } from "@/components/shell";
@@ -62,21 +61,21 @@ export default async function Admin() {
       </h2>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {modules.map((module) => (
-          <div
-            key={module}
-            className="rounded-2xl border border-[#24452b] bg-[#09170e] p-5"
-          >
-            <h3 className="font-bold text-white">{module}</h3>
-            <p className="mt-2 text-xs text-gray-400">
-              Administrative module
-            </p>
 
-            <p className="mt-4 text-xs font-semibold text-lime-300">
-              Coming soon
-            </p>
-          </div>
-        ))}
+        <Link
+          href="/admin/settings"
+          className="rounded-2xl border border-lime-500/40 bg-[#10291a] p-5 transition hover:border-lime-300"
+        >
+          <h3 className="font-bold text-lime-300">
+            Admin Settings
+          </h3>
+          <p className="mt-2 text-xs text-gray-300">
+            Manage platform details and your administrator notification preferences.
+          </p>
+          <p className="mt-4 text-sm font-bold text-white">
+            Open admin settings →
+          </p>
+        </Link>
 
         <Link
           href="/admin/deposit-accounts"
@@ -92,7 +91,22 @@ export default async function Admin() {
             Open deposit accounts →
           </p>
         </Link>
+
+        {modules.map((module) => (
+          <div
+            key={module}
+            className="rounded-2xl border border-[#24452b] bg-[#09170e] p-5"
+          >
+            <h3 className="font-bold text-white">{module}</h3>
+            <p className="mt-2 text-xs text-gray-400">
+              Administrative module
+            </p>
+            <p className="mt-4 text-xs font-semibold text-lime-300">
+              Coming soon
+            </p>
+          </div>
+        ))}
       </div>
     </Shell>
   );
-}
+          }
