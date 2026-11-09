@@ -19,6 +19,12 @@ const links = [
   { href: "/settings", label: "Security & settings", icon: "⚙" },
 ];
 
+const adminLink = {
+  href: "/admin",
+  label: "Admin dashboard",
+  icon: "♛",
+};
+
 export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -26,8 +32,45 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  const visibleLinks = isAdmin ? [...links, adminLink] : links;
 
   useEffect(() => {
+    let active = true;
+
+    async function checkAdmin() {
+      const supabase = createClient();
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        if (active) setIsAdmin(false);
+        return;
+      }
+
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("role,status")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      const allowedRoles = ["admin", "super_admin", "finance", "support"];
+
+      if (active) {
+        setIsAdmin(
+          !error &&
+          !!profile &&
+          allowedRoles.includes(profile.role) &&
+          profile.status === "active"
+        );
+      }
+    }
+
+    checkAdmin();
+
     function updateConnection() {
       setIsOnline(navigator.onLine);
     }
@@ -37,6 +80,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     window.addEventListener("offline", updateConnection);
 
     return () => {
+      active = false;
       window.removeEventListener("online", updateConnection);
       window.removeEventListener("offline", updateConnection);
     };
@@ -71,7 +115,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }
 
   function activeLink(href: string) {
-    return pathname === href
+    return pathname === href || pathname.startsWith(href + "/")
       ? "bg-[#b7ff35] text-[#071b10] shadow-lg shadow-lime-400/10"
       : "text-gray-300 hover:bg-[#173c25] hover:text-white";
   }
@@ -88,16 +132,13 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <div className="mx-auto mb-5 grid h-20 w-20 place-items-center rounded-full border border-red-400/40 bg-red-500/10 text-4xl">
               📡
             </div>
-
             <h1 className="text-2xl font-extrabold text-white">
               You are offline
             </h1>
-
             <p className="mt-4 text-sm leading-7 text-gray-300">
               Your internet connection is not available. Please turn on your
               mobile data or connect to Wi-Fi to continue using WEALTHORA.
             </p>
-
             <div className="mt-6 rounded-xl border border-[#31583a] bg-[#10291a] p-4">
               <p className="text-sm font-bold text-[#b7ff35]">
                 Connection required
@@ -107,7 +148,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 that it is online.
               </p>
             </div>
-
             <button
               type="button"
               onClick={() => setIsOnline(navigator.onLine)}
@@ -129,7 +169,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <span className="grid h-10 w-10 place-items-center rounded-xl border border-lime-300/40 bg-[#173c25] text-xl font-black text-[#b7ff35]">
               W
             </span>
-
             <span>
               <span className="block text-lg font-extrabold tracking-[0.18em]">
                 WEALTHORA
@@ -142,16 +181,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
           <div className="hidden items-center gap-3 md:flex">
             <span className="rounded-full border border-[#31583a] px-3 py-2 text-xs text-lime-200">
-              Secure customer portal
+              {isAdmin ? "Administrator portal" : "Secure customer portal"}
             </span>
-
             <Link
               href="/profile"
               className="rounded-xl bg-[#b7ff35] px-4 py-2 text-sm font-bold text-[#071b10] transition hover:bg-lime-300"
             >
               My account
             </Link>
-
             <button
               type="button"
               onClick={handleLogout}
@@ -179,9 +216,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <p className="mb-4 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#b7ff35]">
             Main navigation
           </p>
-
           <nav className="grid gap-2">
-            {links.map((item) => (
+            {visibleLinks.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -220,10 +256,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
             onClick={closeMenu}
             className="absolute inset-0 h-full w-full"
           />
-
           <section className="absolute bottom-0 left-0 right-0 max-h-[85vh] overflow-y-auto rounded-t-3xl border-t border-[#426b37] bg-[#09170e] p-5 pb-8 text-white shadow-2xl">
             <div className="mx-auto mb-5 h-1 w-12 rounded-full bg-[#b7ff35]" />
-
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-extrabold tracking-wider">
@@ -233,7 +267,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
                   Your account navigation
                 </p>
               </div>
-
               <button
                 type="button"
                 onClick={closeMenu}
@@ -244,7 +277,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </div>
 
             <nav className="grid grid-cols-2 gap-3">
-              {links.map((item) => (
+              {visibleLinks.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
@@ -267,7 +300,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
             >
               {loggingOut ? "Logging out..." : "Logout"}
             </button>
-
             <p className="mt-6 text-center text-xs text-gray-400">
               WEALTHORA • Building wealth with trust
             </p>
@@ -286,16 +318,13 @@ export function Shell({ children }: { children: React.ReactNode }) {
             key={item.href}
             href={item.href}
             className={`flex flex-col items-center gap-1 py-2 text-[10px] font-semibold ${
-              pathname === item.href
-                ? "text-[#b7ff35]"
-                : "text-gray-400"
+              pathname === item.href ? "text-[#b7ff35]" : "text-gray-400"
             }`}
           >
             <span className="text-xl">{item.icon}</span>
             {item.label}
           </Link>
         ))}
-
         <button
           type="button"
           onClick={() => setMenuOpen(true)}
