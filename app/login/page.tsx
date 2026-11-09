@@ -16,7 +16,6 @@ export default function Login() {
 
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-
     if (loading) return;
 
     setLoading(true);
@@ -33,9 +32,7 @@ export default function Login() {
           password,
         }),
         new Promise<never>((_, reject) => {
-          timeoutId = setTimeout(() => {
-            reject(new Error("TIMEOUT"));
-          }, 15000);
+          timeoutId = setTimeout(() => reject(new Error("TIMEOUT")), 15000);
         }),
       ]);
 
@@ -44,23 +41,45 @@ export default function Login() {
         return;
       }
 
-      router.replace("/dashboard");
-      router.refresh();
+      const signedInUser = result.data.user;
 
+      if (!signedInUser) {
+        setMessage("Unable to verify your account. Please sign in again.");
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role, status")
+        .eq("id", signedInUser.id)
+        .maybeSingle();
+
+      if (profileError || !profile) {
+        setMessage(
+          "You are signed in, but we could not verify your account permissions. Please refresh and try again."
+        );
+        return;
+      }
+
+      const adminRoles = ["admin", "super_admin", "finance", "support"];
+
+      const destination =
+        profile.status === "active" && adminRoles.includes(profile.role)
+          ? "/admin"
+          : "/dashboard";
+
+      router.replace(destination);
+      router.refresh();
     } catch (error) {
       console.error("WEALTHORA login error:", error);
 
-      if (error instanceof Error && error.message === "TIMEOUT") {
-        setMessage(
-          "Sign-in timed out. Check your internet connection and try again."
-        );
-      } else {
-        setMessage(
-          error instanceof Error
+      setMessage(
+        error instanceof Error && error.message === "TIMEOUT"
+          ? "Sign-in timed out. Check your internet connection and try again."
+          : error instanceof Error
             ? error.message
-            : "Unknown login error. Please try again."
-        );
-      }
+            : "Unable to sign in. Please try again."
+      );
     } finally {
       if (timeoutId) clearTimeout(timeoutId);
       setLoading(false);
@@ -136,7 +155,6 @@ export default function Login() {
           <Link href="/forgot-password" className="text-[#b7ff36]">
             Forgot Password?
           </Link>
-
           <Link href="/register" className="text-[#b7ff36]">
             Create Account
           </Link>
@@ -144,4 +162,4 @@ export default function Login() {
       </form>
     </main>
   );
-            }
+        }
