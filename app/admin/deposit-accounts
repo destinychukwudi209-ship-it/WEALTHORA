@@ -1,0 +1,79 @@
+import { Shell, PageTitle } from "@/components/shell";
+import { requireAdmin } from "@/lib/auth";
+
+export default async function DepositAccountsPage() {
+  const { supabase } = await requireAdmin();
+
+  const { data: accounts, error } = await supabase
+    .from("deposit_accounts")
+    .select("id, bank_name, account_name, account_number, instructions, is_active")
+    .order("bank_name");
+
+  return (
+    <Shell>
+      <PageTitle
+        title="Deposit Bank Accounts"
+        subtitle="Manage the bank accounts customers use to fund their wallets."
+      />
+
+      <div className="panel mb-5">
+        <h2 className="font-semibold mb-2">Account management</h2>
+        <p className="muted text-sm">
+          Add, edit, activate or deactivate deposit accounts.
+          Only authorized administrators can manage these details.
+        </p>
+      </div>
+
+      {error ? (
+        <div className="panel text-red-500">
+          Unable to load deposit accounts.
+        </div>
+      ) : !accounts || accounts.length === 0 ? (
+        <div className="panel">
+          <h2 className="font-semibold mb-2">
+            No bank accounts added yet
+          </h2>
+          <p className="muted text-sm">
+            Add a verified business bank account to allow customers to make deposits.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {accounts.map((account) => (
+            <div className="panel" key={account.id}>
+              <h3 className="font-semibold text-lg">
+                {account.bank_name}
+              </h3>
+
+              <p className="muted text-sm mt-2">Account name</p>
+              <p className="font-semibold">{account.account_name}</p>
+
+              <p className="muted text-sm mt-2">Account number</p>
+              <p className="font-bold tracking-wider">
+                {account.account_number}
+              </p>
+
+              {account.instructions && (
+                <p className="muted text-sm mt-3">
+                  {account.instructions}
+                </p>
+              )}
+
+              <p className="text-sm mt-3">
+                Status: {account.is_active ? "Active" : "Inactive"}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="panel mt-5">
+        <h2 className="font-semibold mb-2">Security notice</h2>
+        <p className="muted text-sm">
+          Bank account changes must be restricted to authorized administrators
+          and recorded in the audit log.
+        </p>
+      </div>
+    </Shell>
+  );
+}
