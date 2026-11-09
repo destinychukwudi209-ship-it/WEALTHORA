@@ -1,5 +1,7 @@
+
 import Link from "next/link";
-import { redirect, revalidatePath } from "next/navigation";
+import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import { Shell, PageTitle } from "@/components/shell";
 
@@ -39,7 +41,7 @@ function statusStyle(status: string) {
 export default async function AdminSupportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ticket?: string }>;
+  searchParams: Promise<{ ticket?: string; error?: string }>;
 }) {
   const { supabase, profile } = await requireAdmin();
 
@@ -405,7 +407,10 @@ export default async function AdminSupportPage({
                   )}
                 </div>
 
-                <form action={sendReply} className="space-y-3 border-t border-gray-200 bg-white p-4">
+                <form
+                  action={sendReply}
+                  className="space-y-3 border-t border-gray-200 bg-white p-4"
+                >
                   <input
                     type="hidden"
                     name="ticket_id"
@@ -464,4 +469,5 @@ export default async function AdminSupportPage({
       </main>
     </Shell>
   );
-      }
+               }
+                            
