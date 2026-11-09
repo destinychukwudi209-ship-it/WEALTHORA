@@ -22,6 +22,7 @@ const links = [
 export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -78,18 +79,25 @@ export function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-[#050806] text-white">
       {!isOnline && (
-        <div className="fixed inset-0 z-[100] flex min-h-screen items-center justify-center bg-[#050806] px-6 text-center" role="alert" aria-live="assertive">
+        <div
+          className="fixed inset-0 z-[100] flex min-h-screen items-center justify-center bg-[#050806] px-6 text-center"
+          role="alert"
+          aria-live="assertive"
+        >
           <div className="w-full max-w-md rounded-3xl border border-[#426b37] bg-[#09170e] p-8 shadow-2xl">
             <div className="mx-auto mb-5 grid h-20 w-20 place-items-center rounded-full border border-red-400/40 bg-red-500/10 text-4xl">
               📡
             </div>
+
             <h1 className="text-2xl font-extrabold text-white">
               You are offline
             </h1>
+
             <p className="mt-4 text-sm leading-7 text-gray-300">
               Your internet connection is not available. Please turn on your
               mobile data or connect to Wi-Fi to continue using WEALTHORA.
             </p>
+
             <div className="mt-6 rounded-xl border border-[#31583a] bg-[#10291a] p-4">
               <p className="text-sm font-bold text-[#b7ff35]">
                 Connection required
@@ -99,6 +107,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 that it is online.
               </p>
             </div>
+
             <button
               type="button"
               onClick={() => setIsOnline(navigator.onLine)}
@@ -120,6 +129,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <span className="grid h-10 w-10 place-items-center rounded-xl border border-lime-300/40 bg-[#173c25] text-xl font-black text-[#b7ff35]">
               W
             </span>
+
             <span>
               <span className="block text-lg font-extrabold tracking-[0.18em]">
                 WEALTHORA
@@ -134,12 +144,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <span className="rounded-full border border-[#31583a] px-3 py-2 text-xs text-lime-200">
               Secure customer portal
             </span>
+
             <Link
               href="/profile"
               className="rounded-xl bg-[#b7ff35] px-4 py-2 text-sm font-bold text-[#071b10] transition hover:bg-lime-300"
             >
               My account
             </Link>
+
             <button
               type="button"
               onClick={handleLogout}
@@ -167,6 +179,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <p className="mb-4 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#b7ff35]">
             Main navigation
           </p>
+
           <nav className="grid gap-2">
             {links.map((item) => (
               <Link
@@ -188,7 +201,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
               WEALTHORA SECURITY
             </p>
             <p className="mt-2 text-xs leading-5 text-gray-300">
-              Protect your account. Never share your password or verification codes.
+              Protect your account. Never share your password or verification
+              codes.
             </p>
           </div>
         </aside>
@@ -206,8 +220,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
             onClick={closeMenu}
             className="absolute inset-0 h-full w-full"
           />
+
           <section className="absolute bottom-0 left-0 right-0 max-h-[85vh] overflow-y-auto rounded-t-3xl border-t border-[#426b37] bg-[#09170e] p-5 pb-8 text-white shadow-2xl">
             <div className="mx-auto mb-5 h-1 w-12 rounded-full bg-[#b7ff35]" />
+
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-extrabold tracking-wider">
@@ -217,6 +233,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                   Your account navigation
                 </p>
               </div>
+
               <button
                 type="button"
                 onClick={closeMenu}
@@ -278,6 +295,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             {item.label}
           </Link>
         ))}
+
         <button
           type="button"
           onClick={() => setMenuOpen(true)}
@@ -308,5 +326,5 @@ export function PageTitle({
       </p>
     </div>
   );
-}
-  
+        }
+                    
