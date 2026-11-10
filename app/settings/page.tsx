@@ -6,12 +6,18 @@ import { useEffect, useState } from "react";
 import { Shell, PageTitle } from "@/components/shell";
 import { createClient } from "@/lib/supabase/client";
 
-type PinState = "loading" | "ready" | "signed-out" | "unverified" | "error";
+type PinState =
+  | "loading"
+  | "ready"
+  | "signed-out"
+  | "unverified"
+  | "error";
 
 export default function Settings() {
   const [verification, setVerification] = useState<
     "loading" | "verified" | "unverified" | "signed-out"
   >("loading");
+
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState("");
@@ -55,6 +61,11 @@ export default function Settings() {
       if (!active) return;
 
       if (statusError || !status?.ok) {
+        setPinMessage(
+          statusError
+            ? `${statusError.message} (code: ${statusError.code ?? "unknown"})`
+            : JSON.stringify(status)
+        );
         setPinState("error");
         return;
       }
@@ -83,8 +94,7 @@ export default function Settings() {
         type: "signup",
         email,
         options: {
-          emailRedirectTo:
-            `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 
@@ -263,7 +273,10 @@ export default function Settings() {
           )}
 
           {message && (
-            <p role="status" className="mt-3 rounded-xl border border-[#526b36] bg-[#17251a] p-3 text-sm text-gray-200">
+            <p
+              role="status"
+              className="mt-3 rounded-xl border border-[#526b36] bg-[#17251a] p-3 text-sm text-gray-200"
+            >
               {message}
             </p>
           )}
@@ -299,9 +312,10 @@ export default function Settings() {
           )}
 
           {pinState === "error" && (
-            <p className="mt-2 text-sm text-amber-300">
-              Could not load PIN status. Please refresh and try again.
-            </p>
+            <div className="mt-2 break-words text-sm text-amber-300">
+              <p>PIN status error:</p>
+              <p>{pinMessage}</p>
+            </div>
           )}
 
           {pinState === "ready" && (
@@ -321,7 +335,11 @@ export default function Settings() {
                     maxLength={6}
                     pattern="[0-9]{6}"
                     value={currentPin}
-                    onChange={(e) => setCurrentPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    onChange={(e) =>
+                      setCurrentPin(
+                        e.target.value.replace(/\D/g, "").slice(0, 6)
+                      )
+                    }
                     placeholder="Current six-digit PIN"
                     aria-label="Current Transaction PIN"
                     required
@@ -336,7 +354,11 @@ export default function Settings() {
                   maxLength={6}
                   pattern="[0-9]{6}"
                   value={newPin}
-                  onChange={(e) => setNewPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  onChange={(e) =>
+                    setNewPin(
+                      e.target.value.replace(/\D/g, "").slice(0, 6)
+                    )
+                  }
                   placeholder="New six-digit PIN"
                   aria-label="New Transaction PIN"
                   required
@@ -350,7 +372,11 @@ export default function Settings() {
                   maxLength={6}
                   pattern="[0-9]{6}"
                   value={confirmPin}
-                  onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  onChange={(e) =>
+                    setConfirmPin(
+                      e.target.value.replace(/\D/g, "").slice(0, 6)
+                    )
+                  }
                   placeholder="Confirm new PIN"
                   aria-label="Confirm new Transaction PIN"
                   required
@@ -377,7 +403,8 @@ export default function Settings() {
               )}
 
               <p className="muted mt-3 text-xs">
-                Never share your PIN with anyone. This setup is not yet connected to withdrawal or payment authorization.
+                Never share your PIN with anyone. This setup is not yet
+                connected to withdrawal or payment authorization.
               </p>
             </>
           )}
@@ -408,4 +435,4 @@ export default function Settings() {
     </Shell>
   );
         }
-    
+          
