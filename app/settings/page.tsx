@@ -13,6 +13,49 @@ type PinState =
   | "unverified"
   | "error";
 
+function PinInput({
+  value,
+  onChange,
+  placeholder,
+  label,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  label: string;
+}) {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <div className="relative">
+      <input
+        type={visible ? "text" : "password"}
+        inputMode="numeric"
+        autoComplete="off"
+        maxLength={6}
+        pattern="[0-9]{6}"
+        value={value}
+        onChange={(e) =>
+          onChange(e.target.value.replace(/\D/g, "").slice(0, 6))
+        }
+        placeholder={placeholder}
+        aria-label={label}
+        required
+        className="w-full rounded-xl border border-white/15 bg-transparent p-3 pr-16 text-white"
+      />
+
+      <button
+        type="button"
+        onClick={() => setVisible(!visible)}
+        aria-label={visible ? "Hide PIN" : "Show PIN"}
+        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-sm text-gray-300"
+      >
+        {visible ? "Hide" : "Show"}
+      </button>
+    </div>
+  );
+}
+
 export default function Settings() {
   const [verification, setVerification] = useState<
     "loading" | "verified" | "unverified" | "signed-out"
@@ -328,59 +371,26 @@ export default function Settings() {
 
               <form onSubmit={savePin} className="mt-4 space-y-3">
                 {hasPin && (
-                  <input
-                    type="password"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    maxLength={6}
-                    pattern="[0-9]{6}"
+                  <PinInput
                     value={currentPin}
-                    onChange={(e) =>
-                      setCurrentPin(
-                        e.target.value.replace(/\D/g, "").slice(0, 6)
-                      )
-                    }
+                    onChange={setCurrentPin}
                     placeholder="Current six-digit PIN"
-                    aria-label="Current Transaction PIN"
-                    required
-                    className="w-full rounded-xl border border-white/15 bg-transparent p-3 text-white"
+                    label="Current Transaction PIN"
                   />
                 )}
 
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  autoComplete="new-password"
-                  maxLength={6}
-                  pattern="[0-9]{6}"
+                <PinInput
                   value={newPin}
-                  onChange={(e) =>
-                    setNewPin(
-                      e.target.value.replace(/\D/g, "").slice(0, 6)
-                    )
-                  }
+                  onChange={setNewPin}
                   placeholder="New six-digit PIN"
-                  aria-label="New Transaction PIN"
-                  required
-                  className="w-full rounded-xl border border-white/15 bg-transparent p-3 text-white"
+                  label="New Transaction PIN"
                 />
 
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  autoComplete="new-password"
-                  maxLength={6}
-                  pattern="[0-9]{6}"
+                <PinInput
                   value={confirmPin}
-                  onChange={(e) =>
-                    setConfirmPin(
-                      e.target.value.replace(/\D/g, "").slice(0, 6)
-                    )
-                  }
+                  onChange={setConfirmPin}
                   placeholder="Confirm new PIN"
-                  aria-label="Confirm new Transaction PIN"
-                  required
-                  className="w-full rounded-xl border border-white/15 bg-transparent p-3 text-white"
+                  label="Confirm new Transaction PIN"
                 />
 
                 <button
@@ -435,4 +445,4 @@ export default function Settings() {
     </Shell>
   );
         }
-          
+        
