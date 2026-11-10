@@ -41,14 +41,20 @@ function PinInput({
         placeholder={placeholder}
         aria-label={label}
         required
-        className="w-full rounded-xl border border-white/15 bg-transparent p-3 pr-16 text-white"
+        style={{
+          backgroundColor: "#ffffff",
+          color: "#000000",
+          caretColor: "#000000",
+          WebkitTextFillColor: "#000000",
+          opacity: 1,
+        }}
+        className="w-full rounded-xl border border-gray-300 p-3 pr-16 placeholder:text-gray-500"
       />
 
       <button
         type="button"
-        onClick={() => setVisible(!visible)}
-        aria-label={visible ? "Hide PIN" : "Show PIN"}
-        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-sm text-gray-300"
+        onClick={() => setVisible((previous) => !previous)}
+        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-sm font-semibold text-black"
       >
         {visible ? "Hide" : "Show"}
       </button>
@@ -445,4 +451,4 @@ export default function Settings() {
     </Shell>
   );
         }
-        
+                      
