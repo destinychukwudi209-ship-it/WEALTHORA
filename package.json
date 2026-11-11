@@ -1,3 +1,4 @@
+
 {
   "name": "wealthora",
   "version": "1.0.0",
@@ -9,6 +10,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@opennextjs/cloudflare": "^1.6.5",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.1",
     "lucide-react": "^0.468.0",
