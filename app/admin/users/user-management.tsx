@@ -2,7 +2,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 
 type Customer = {
   id: string;
@@ -21,8 +20,6 @@ export default function UserManagement({
   currentUserId: string;
   currentRole: string;
 }) {
-  const supabase = createClient();
-
   const [users, setUsers] = useState<Customer[]>([]);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
@@ -35,23 +32,31 @@ export default function UserManagement({
     setLoading(true);
     setErrorMessage("");
 
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("id,full_name,role,status,created_at")
-      .eq("role", "customer")
-      .order("created_at", { ascending: false });
+    try {
+      const response = await fetch("/api/admin/users/status", {
+        method: "GET",
+        cache: "no-store",
+      });
 
-    if (error) {
+      const result = await response.json();
+
+      if (!response.ok) {
+        setUsers([]);
+        setErrorMessage(
+          result.message || "Unable to retrieve customer records."
+        );
+      } else {
+        setUsers((result.customers || []) as Customer[]);
+      }
+    } catch {
       setUsers([]);
       setErrorMessage(
-        `Database error (${error.code || "unknown"}): ${error.message}`
+        "Unable to retrieve customer records. Please try again."
       );
-    } else {
-      setUsers((data || []) as Customer[]);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     if (currentRole !== "admin" && currentRole !== "super_admin") {
@@ -171,7 +176,7 @@ export default function UserManagement({
           <div>
             <h2 className="font-bold text-white">Live customer records</h2>
             <p className="mt-1 text-xs text-gray-400">
-              Records are retrieved directly from the WEALTHORA database.
+              Records are loaded securely through the admin API.
               Automatic refresh every 20 seconds.
             </p>
           </div>
@@ -297,4 +302,5 @@ export default function UserManagement({
       </div>
     </div>
   );
-}
+      }
+              
