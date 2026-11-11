@@ -12,9 +12,9 @@ const allowedStatuses = [
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify the signed-in user.
     const supabase = await createClient();
 
+    // Verify signed-in administrator.
     const {
       data: { user },
       error: authError,
@@ -27,7 +27,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify administrator permissions.
     const { data: adminProfile, error: adminError } =
       await supabase
         .from("profiles")
@@ -41,14 +40,12 @@ export async function POST(request: NextRequest) {
       !["admin", "super_admin"].includes(adminProfile.role)
     ) {
       return NextResponse.json(
-        {
-          message: "You are not authorized to manage accounts.",
-        },
+        { message: "You are not authorized to manage accounts." },
         { status: 403 }
       );
     }
 
-    // Read request data.
+    // Validate request.
     let body: {
       userId?: unknown;
       status?: unknown;
@@ -81,64 +78,41 @@ export async function POST(request: NextRequest) {
       )
     ) {
       return NextResponse.json(
-        {
-          message: "Invalid customer account or status.",
-        },
+        { message: "Invalid customer account or status." },
         { status: 400 }
       );
     }
 
-    // Create the secure admin client.
+    // Update the customer directly using the server admin client.
     const admin = await createAdminClient();
 
-    // Confirm the target account is a customer.
-    const { data: target, error: targetError } =
-      await admin
-        .from("profiles")
-        .select("id, role")
-        .eq("id", targetUserId)
-        .maybeSingle();
-
-    if (targetError) {
-      console.error(
-        "Target account lookup failed:",
-        targetError.message
-      );
-
-      return NextResponse.json(
-        { message: "Unable to find the customer account." },
-        { status: 500 }
-      );
-    }
-
-    if (!target || target.role !== "customer") {
-      return NextResponse.json(
-        { message: "Customer account not found." },
-        { status: 404 }
-      );
-    }
-
-    // Update customer account status.
     const { data: updated, error: updateError } =
       await admin
         .from("profiles")
         .update({ status: newStatus })
         .eq("id", targetUserId)
         .eq("role", "customer")
-        .select("id")
+        .select("id, role, status")
         .maybeSingle();
 
-    if (updateError || !updated) {
+    if (updateError) {
       console.error(
-        "Account status update failed:",
-        updateError?.message
+        "Customer status update failed:",
+        updateError.message
       );
 
       return NextResponse.json(
-        {
-          message: "Unable to update customer account status.",
-        },
+        { message: "Database could not update the account status." },
         { status: 500 }
+      );
+    }
+
+    if (!updated) {
+      return NextResponse.json(
+        {
+          message: "No matching customer profile was updated. Please refresh and try again.",
+        },
+        { status: 404 }
       );
     }
 
@@ -146,7 +120,7 @@ export async function POST(request: NextRequest) {
       ok: true,
       message: "Customer account status updated successfully.",
       userId: updated.id,
-      status: newStatus,
+      status: updated.status,
     });
   } catch (error) {
     console.error("Admin status API error:", error);
@@ -156,4 +130,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+          }
