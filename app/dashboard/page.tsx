@@ -6,24 +6,24 @@ import { useEffect, useState } from "react";
 import { Shell, PageTitle } from "@/components/shell";
 import { createClient } from "@/lib/supabase/client";
 
-const balances = [
+const balanceCards = [
   {
     title: "Main Balance",
-    amount: "₦—",
+    key: "main",
     description: "Available for investment plan purchases only",
     icon: "◈",
     href: "/wallet",
   },
   {
     title: "Task Balance",
-    amount: "₦—",
+    key: "task",
     description: "Your eligible task earnings",
     icon: "✦",
     href: "/wallet",
   },
   {
     title: "Affiliate Balance",
-    amount: "₦—",
+    key: "affiliate",
     description: "Your eligible referral commissions",
     icon: "♧",
     href: "/referrals",
@@ -37,28 +37,129 @@ const shortcuts = [
   { label: "Affiliate Centre", detail: "Track your referrals", href: "/referrals", icon: "♧" },
 ];
 
+const moneyFormat = new Intl.NumberFormat("en-NG", {
+  style: "currency",
+  currency: "NGN",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
 export default function Dashboard() {
   const [customerName, setCustomerName] = useState("there");
+  const [amounts, setAmounts] = useState<Record<string, string>>({
+    main: "Loading...",
+    task: "Loading...",
+    affiliate: "Loading...",
+  });
+  const [balanceError, setBalanceError] = useState("");
 
   useEffect(() => {
     const supabase = createClient();
+    let active = true;
 
-    async function loadCustomerName() {
-      const { data: { user } } = await supabase.auth.getUser();
+    async function loadDashboard() {
+      try {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
 
-      if (user) {
+        if (userError) throw userError;
+
+        if (!user) {
+          throw new Error("Please sign in again to view your balances.");
+        }
+
         const name =
           user.user_metadata?.full_name ||
           user.user_metadata?.name ||
           user.email?.split("@")[0];
 
-        if (name) {
-          setCustomerName(name);
+        if (name && active) setCustomerName(name);
+
+        const { data: accounts, error: accountsError } = await supabase
+          .from("ledger_accounts")
+          .select("id, balance_type")
+          .eq("user_id", user.id)
+          .eq("currency", "NGN");
+
+        if (accountsError) throw accountsError;
+
+        if (!accounts || accounts.length === 0) {
+          throw new Error("Your wallet accounts are not set up yet.");
         }
+
+        const accountIds = accounts.map((account) => account.id);
+
+        const { data: entries, error: entriesError } = await supabase
+          .from("ledger_entries")
+          .select("account_id, entry_type, amount")
+          .in("account_id", accountIds)
+          .eq("status", "posted");
+
+        if (entriesError) throw entriesError;
+
+        const totals: Record<string, number> = {
+          main: 0,
+          task: 0,
+          affiliate: 0,
+        };
+
+        const accountTypes: Record<string, string> = {};
+
+        for (const account of accounts) {
+          accountTypes[account.id] = account.balance_type;
+        }
+
+        for (const entry of entries || []) {
+          const type = accountTypes[entry.account_id];
+
+          if (!type || !(type in totals)) continue;
+
+          const value = Number(entry.amount);
+
+          if (!Number.isFinite(value)) continue;
+
+          if (entry.entry_type === "credit") {
+            totals[type] += value;
+          } else if (entry.entry_type === "debit") {
+            totals[type] -= value;
+          }
+        }
+
+        if (!active) return;
+
+        setAmounts({
+          main: moneyFormat.format(totals.main),
+          task: moneyFormat.format(totals.task),
+          affiliate: moneyFormat.format(totals.affiliate),
+        });
+
+        setBalanceError("");
+      } catch (error) {
+        if (!active) return;
+
+        console.error("Dashboard loading error:", error);
+
+        setBalanceError(
+          error instanceof Error
+            ? error.message
+            : "Unable to load your balances. Please refresh."
+        );
+
+        setAmounts({
+          main: "Unavailable",
+          task: "Unavailable",
+          affiliate: "Unavailable",
+        });
       }
     }
 
-    loadCustomerName();
+    loadDashboard();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   return (
@@ -73,9 +174,7 @@ export default function Dashboard() {
           </span>
         </div>
 
-        <p className="mt-8 text-sm text-gray-300">
-          Welcome to WEALTHORA
-        </p>
+        <p className="mt-8 text-sm text-gray-300">Welcome to WEALTHORA</p>
 
         <h1 className="mt-2 max-w-xl text-3xl font-extrabold leading-tight sm:text-4xl">
           Welcome, {customerName}!
@@ -107,8 +206,14 @@ export default function Dashboard() {
         subtitle="Three separate balances for three different purposes."
       />
 
+      {balanceError && (
+        <div className="mb-4 rounded-xl border border-red-500/40 bg-red-950/30 p-4 text-sm text-red-200">
+          Balance loading problem: {balanceError}
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {balances.map((item) => (
+        {balanceCards.map((item) => (
           <Link
             href={item.href}
             key={item.title}
@@ -123,8 +228,8 @@ export default function Dashboard() {
               </span>
             </div>
 
-            <p className="mt-5 text-3xl font-extrabold text-white">
-              {item.amount}
+            <p className="mt-5 break-words text-3xl font-extrabold text-white">
+              {amounts[item.key]}
             </p>
 
             <p className="mt-2 text-xs leading-5 text-gray-400">
@@ -236,5 +341,5 @@ export default function Dashboard() {
       </footer>
     </Shell>
   );
-  }
-              
+          }
+      
