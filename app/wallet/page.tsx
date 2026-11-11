@@ -1,35 +1,118 @@
 
 import Link from "next/link";
 import { Shell, PageTitle } from "@/components/shell";
+import { createClient } from "@/lib/supabase/server";
 
-const wallets = [
+type BalanceType = "main" | "task" | "affiliate";
+
+const walletInfo: {
+  type: BalanceType;
+  name: string;
+  description: string;
+  color: string;
+}[] = [
   {
+    type: "main",
     name: "Main Balance",
-    amount: "₦—",
     description: "Your funds for purchasing investment plans.",
     color: "border-emerald-200 bg-emerald-50",
   },
   {
+    type: "task",
     name: "Task Balance",
-    amount: "₦—",
     description: "Your eligible task earnings and withdrawal funds.",
     color: "border-amber-200 bg-amber-50",
   },
   {
+    type: "affiliate",
     name: "Affiliate Balance",
-    amount: "₦—",
     description: "Your eligible referral commissions.",
     color: "border-blue-200 bg-blue-50",
   },
 ];
 
-export default function Wallet() {
+const money = new Intl.NumberFormat("en-NG", {
+  style: "currency",
+  currency: "NGN",
+  minimumFractionDigits: 2,
+});
+
+export default async function Wallet() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let balances: Record<BalanceType, number> = {
+    main: 0,
+    task: 0,
+    affiliate: 0,
+  };
+
+  let walletError = "";
+
+  if (user) {
+    const { data: accounts, error: accountError } = await supabase
+      .from("ledger_accounts")
+      .select("id, balance_type")
+      .eq("user_id", user.id);
+
+    if (accountError) {
+      walletError = "Unable to load your wallet accounts. Please refresh.";
+    } else if (accounts && accounts.length > 0) {
+      const accountIds = accounts.map((account) => account.id);
+
+      const { data: entries, error: entriesError } = await supabase
+        .from("ledger_entries")
+        .select("account_id, entry_type, amount")
+        .in("account_id", accountIds)
+        .eq("status", "posted");
+
+      if (entriesError) {
+        walletError = "Unable to load your wallet transactions. Please refresh.";
+      } else {
+        for (const entry of entries ?? []) {
+          const account = accounts.find(
+            (item) => item.id === entry.account_id
+          );
+
+          if (!account) continue;
+
+          const type = account.balance_type as BalanceType;
+          if (!(type in balances)) continue;
+
+          const amount = Number(entry.amount);
+          if (!Number.isFinite(amount)) continue;
+
+          balances[type] +=
+            entry.entry_type === "credit" ? amount : -amount;
+        }
+      }
+    }
+  }
+
   return (
     <Shell>
       <PageTitle
         title="My Wallet"
-        subtitle="Your money, organised into three separate balances."
+        subtitle="Your balances are calculated from your posted ledger transactions."
       />
+
+      {!user && (
+        <div className="mb-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          Please sign in to view your wallet.
+        </div>
+      )}
+
+      {walletError && (
+        <div
+          role="alert"
+          className="mb-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+        >
+          {walletError}
+        </div>
+      )}
 
       <div className="mb-6 rounded-3xl bg-gradient-to-br from-[#08291c] to-[#10432d] p-6 text-white shadow-xl">
         <p className="text-sm text-emerald-100">WEALTHORA WALLET</p>
@@ -37,7 +120,7 @@ export default function Wallet() {
           Manage your balances
         </h2>
         <p className="mt-2 text-sm leading-6 text-emerald-100/80">
-          View your funds, track earnings and manage eligible withdrawal requests securely.
+          View your recorded balances and track your wallet activity.
         </p>
         <Link
           href="/deposit"
@@ -48,16 +131,16 @@ export default function Wallet() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {wallets.map((wallet) => (
+        {walletInfo.map((wallet) => (
           <section
-            key={wallet.name}
+            key={wallet.type}
             className={`rounded-2xl border p-5 shadow-sm ${wallet.color}`}
           >
             <p className="text-sm font-bold text-slate-700">
               {wallet.name}
             </p>
-            <p className="mt-5 text-3xl font-extrabold text-[#0b2118]">
-              {wallet.amount}
+            <p className="mt-5 break-words text-3xl font-extrabold text-[#0b2118]">
+              {money.format(balances[wallet.type])}
             </p>
             <p className="mt-3 text-xs leading-5 text-slate-600">
               {wallet.description}
@@ -71,7 +154,8 @@ export default function Wallet() {
           Main Balance
         </h2>
         <p className="mt-2 text-sm leading-6 text-slate-500">
-          Main Balance is used to purchase WEALTHORA investment plans. Task Balance and Affiliate Balance cannot be substituted for it.
+          Main Balance is used to purchase WEALTHORA investment plans.
+          Task Balance and Affiliate Balance cannot be substituted for it.
         </p>
         <Link
           href="/invest"
@@ -86,7 +170,8 @@ export default function Wallet() {
           Task Balance withdrawals
         </h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">
-          Withdrawal requests open every 30th of the month, from 8:50 PM to 10:20 PM Nigeria time.
+          Withdrawal requests open every 30th of the month, from 8:50 PM
+          to 10:20 PM Nigeria time.
         </p>
         <div className="mt-4 rounded-xl bg-white p-4">
           <p className="text-sm font-semibold text-slate-800">
@@ -95,18 +180,16 @@ export default function Wallet() {
           <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-slate-600">
             <li>Submitted requests remain Pending.</li>
             <li>Admins can approve or reject requests.</li>
-            <li>Rejected amounts are refunded to Task Balance.</li>
-            <li>Approved requests may take up to 3 days to process.</li>
+            <li>Rejected amounts must be refunded exactly once.</li>
+            <li>Approval does not mean payment has been made.</li>
           </ul>
         </div>
       </section>
 
       <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
-        <h2 className="font-bold text-[#0b2118]">
-          Wallet activity
-        </h2>
+        <h2 className="font-bold text-[#0b2118]">Wallet activity</h2>
         <p className="mt-2 text-sm text-slate-500">
-          Your verified deposits, transfers, earnings and withdrawals will appear here.
+          Your posted ledger transactions determine the balances shown above.
         </p>
         <Link
           href="/transactions"
@@ -117,4 +200,4 @@ export default function Wallet() {
       </section>
     </Shell>
   );
-}
+    }
