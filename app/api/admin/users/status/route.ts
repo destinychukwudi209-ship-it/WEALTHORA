@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
 
+    // Verify signed-in administrator.
     const {
       data: { user },
       error: authError,
@@ -26,6 +27,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check administrator permissions.
     const { data: adminProfile, error: adminError } =
       await supabase
         .from("profiles")
@@ -44,6 +46,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Read request body.
     let body: {
       userId?: unknown;
       status?: unknown;
@@ -81,8 +84,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Create server-side admin client.
     const admin = await createAdminClient();
 
+    // Update customer profile.
     const { data: updated, error: updateError } =
       await admin
         .from("profiles")
@@ -102,11 +107,8 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json(
         {
-          message: "Database update failed.",
-          databaseCode: updateError.code,
-          databaseMessage: updateError.message,
-          databaseDetails: updateError.details,
-          databaseHint: updateError.hint,
+          message:
+            `Database error ${updateError.code}: ${updateError.message}`,
         },
         { status: 500 }
       );
@@ -115,8 +117,8 @@ export async function POST(request: NextRequest) {
     if (!updated) {
       return NextResponse.json(
         {
-          message: "No matching customer profile was updated.",
-          targetUserId,
+          message:
+            "No matching customer profile was updated. Check the customer ID and role.",
         },
         { status: 404 }
       );
@@ -132,8 +134,9 @@ export async function POST(request: NextRequest) {
     console.error("Admin status API error:", error);
 
     return NextResponse.json(
-      { message: "An unexpected error occurred." },
+      { message: "An unexpected server error occurred." },
       { status: 500 }
     );
   }
-          }
+      }
+      
