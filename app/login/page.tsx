@@ -1,87 +1,74 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export default function Login() {
   const router = useRouter();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
+  async function handleLogin(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (loading) return;
 
     setLoading(true);
     setMessage("");
 
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const supabase = createClient();
 
     try {
-      const supabase = createClient();
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
 
-      const result = await Promise.race([
-        supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        }),
-        new Promise<never>((_, reject) => {
-          timeoutId = setTimeout(() => reject(new Error("TIMEOUT")), 15000);
-        }),
-      ]);
-
-      if (result.error) {
-        setMessage(result.error.message);
-        return;
-      }
-
-      const signedInUser = result.data.user;
-
-      if (!signedInUser) {
-        setMessage("Unable to verify your account. Please sign in again.");
+      if (error || !data.user) {
+        setMessage("Incorrect email or password. Please check and try again.");
         return;
       }
 
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("role, status")
-        .eq("id", signedInUser.id)
+        .select("role,status")
+        .eq("id", data.user.id)
         .maybeSingle();
 
       if (profileError || !profile) {
-        setMessage(
-          "You are signed in, but we could not verify your account permissions. Please refresh and try again."
+        await supabase.auth.signOut();
+        setMessage("We could not verify your account. Please contact support.");
+        return;
+      }
+
+      if (["suspended", "frozen", "closed"].includes(profile.status)) {
+        await supabase.auth.signOut();
+        router.replace(
+          `/account-restricted?status=${encodeURIComponent(profile.status)}`
         );
+        return;
+      }
+
+      if (profile.status !== "active") {
+        await supabase.auth.signOut();
+        setMessage("Your account is not active yet. Please contact support.");
         return;
       }
 
       const adminRoles = ["admin", "super_admin", "finance", "support"];
 
-      const destination =
-        profile.status === "active" && adminRoles.includes(profile.role)
-          ? "/admin"
-          : "/dashboard";
-
-      router.replace(destination);
-      router.refresh();
-    } catch (error) {
-      console.error("WEALTHORA login error:", error);
-
-      setMessage(
-        error instanceof Error && error.message === "TIMEOUT"
-          ? "Sign-in timed out. Check your internet connection and try again."
-          : error instanceof Error
-            ? error.message
-            : "Unable to sign in. Please try again."
+      router.replace(
+        adminRoles.includes(profile.role) ? "/admin" : "/dashboard"
       );
+      router.refresh();
+    } catch {
+      await supabase.auth.signOut();
+      setMessage("Unable to sign in. Please check your internet connection.");
     } finally {
-      if (timeoutId) clearTimeout(timeoutId);
       setLoading(false);
     }
   }
@@ -114,9 +101,9 @@ export default function Login() {
               type="email"
               autoComplete="email"
               required
-              placeholder="Enter your email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email address"
             />
           </label>
 
@@ -127,9 +114,9 @@ export default function Login() {
               type="password"
               autoComplete="current-password"
               required
-              placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
             />
           </label>
         </div>
@@ -139,14 +126,11 @@ export default function Login() {
           disabled={loading}
           className="mt-7 w-full rounded-2xl bg-[#b7ff36] px-5 py-5 text-xl font-bold text-[#071006] disabled:opacity-60"
         >
-          {loading ? "Signing In..." : "Sign In"}
+          {loading ? "Checking Account..." : "Sign In"}
         </button>
 
         {message && (
-          <p
-            role="alert"
-            className="mt-4 rounded-xl bg-red-950/40 p-3 text-sm text-red-300"
-          >
+          <p role="alert" className="mt-4 rounded-xl bg-red-950/40 p-3 text-sm text-red-300">
             {message}
           </p>
         )}
@@ -162,4 +146,4 @@ export default function Login() {
       </form>
     </main>
   );
-        }
+            }
