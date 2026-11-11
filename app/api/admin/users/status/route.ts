@@ -19,7 +19,10 @@ async function verifyAdmin() {
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    return { error: "Please sign in again.", status: 401 };
+    return {
+      error: "Please sign in again.",
+      status: 401,
+    };
   }
 
   const { data: profile, error } = await supabase
@@ -42,6 +45,7 @@ async function verifyAdmin() {
   return { user };
 }
 
+// Load customer records securely for authorized administrators.
 export async function GET() {
   try {
     const auth = await verifyAdmin();
@@ -62,9 +66,12 @@ export async function GET() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Customer records error:", error);
+      console.error("Customer records database error:", error);
+
       return NextResponse.json(
-        { message: "Unable to load customer records." },
+        {
+          message: `Database error ${error.code || "unknown"}: ${error.message}`,
+        },
         { status: 500 }
       );
     }
@@ -74,14 +81,21 @@ export async function GET() {
       customers: data || [],
     });
   } catch (error) {
-    console.error("Customer GET API error:", error);
+    console.error("Customer records API error:", error);
+
     return NextResponse.json(
-      { message: "Unexpected server error." },
+      {
+        message:
+          error instanceof Error
+            ? `Server error: ${error.message}`
+            : "Unexpected server error while loading customers.",
+      },
       { status: 500 }
     );
   }
 }
 
+// Update a customer's account status.
 export async function POST(request: NextRequest) {
   try {
     const auth = await verifyAdmin();
@@ -93,20 +107,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json().catch(() => null);
+    const body: unknown = await request.json().catch(() => null);
 
-    if (!body || typeof body !== "object") {
+    if (
+      !body ||
+      typeof body !== "object" ||
+      Array.isArray(body)
+    ) {
       return NextResponse.json(
         { message: "Invalid request body." },
         { status: 400 }
       );
     }
 
+    const payload = body as Record<string, unknown>;
+
     const targetUserId =
-      typeof body.userId === "string" ? body.userId.trim() : "";
+      typeof payload.userId === "string"
+        ? payload.userId.trim()
+        : "";
 
     const newStatus =
-      typeof body.status === "string" ? body.status : "";
+      typeof payload.status === "string"
+        ? payload.status
+        : "";
 
     if (
       !targetUserId ||
@@ -132,9 +156,12 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (error) {
-      console.error("Status update error:", error);
+      console.error("Customer status update error:", error);
+
       return NextResponse.json(
-        { message: `Database error ${error.code}: ${error.message}` },
+        {
+          message: `Database error ${error.code || "unknown"}: ${error.message}`,
+        },
         { status: 500 }
       );
     }
@@ -154,9 +181,15 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Admin status API error:", error);
+
     return NextResponse.json(
-      { message: "Unexpected server error." },
+      {
+        message:
+          error instanceof Error
+            ? `Server error: ${error.message}`
+            : "Unexpected server error.",
+      },
       { status: 500 }
     );
   }
-      }
+  }
