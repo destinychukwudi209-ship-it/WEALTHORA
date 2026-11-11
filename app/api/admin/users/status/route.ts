@@ -14,7 +14,6 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
 
-    // Verify signed-in administrator.
     const {
       data: { user },
       error: authError,
@@ -45,7 +44,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate request.
     let body: {
       userId?: unknown;
       status?: unknown;
@@ -83,7 +81,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update the customer directly using the server admin client.
     const admin = await createAdminClient();
 
     const { data: updated, error: updateError } =
@@ -96,13 +93,21 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
 
     if (updateError) {
-      console.error(
-        "Customer status update failed:",
-        updateError.message
-      );
+      console.error("STATUS UPDATE DIAGNOSTIC:", {
+        code: updateError.code,
+        message: updateError.message,
+        details: updateError.details,
+        hint: updateError.hint,
+      });
 
       return NextResponse.json(
-        { message: "Database could not update the account status." },
+        {
+          message: "Database update failed.",
+          databaseCode: updateError.code,
+          databaseMessage: updateError.message,
+          databaseDetails: updateError.details,
+          databaseHint: updateError.hint,
+        },
         { status: 500 }
       );
     }
@@ -110,7 +115,8 @@ export async function POST(request: NextRequest) {
     if (!updated) {
       return NextResponse.json(
         {
-          message: "No matching customer profile was updated. Please refresh and try again.",
+          message: "No matching customer profile was updated.",
+          targetUserId,
         },
         { status: 404 }
       );
