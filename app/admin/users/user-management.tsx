@@ -102,28 +102,33 @@ export default function UserManagement({
     setErrorMessage("");
     setSuccessMessage("");
 
-    const { data, error } = await supabase
-      .from("profiles")
-      .update({ status: newStatus })
-      .eq("id", user.id)
-      .eq("role", "customer")
-      .select("id")
-      .maybeSingle();
+    try {
+      const response = await fetch("/api/admin/users/status", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          status: newStatus,
+        }),
+      });
 
-    if (error) {
-      setErrorMessage(
-        `Status update failed (${error.code || "unknown"}): ${error.message}`
-      );
-    } else if (!data) {
-      setErrorMessage(
-        "No account was updated. Check your administrator permissions."
-      );
-    } else {
-      setSuccessMessage("Customer account status updated.");
-      await loadUsers();
+      const result = await response.json();
+
+      if (!response.ok) {
+        setErrorMessage(
+          result.message || "Unable to update customer account status."
+        );
+      } else {
+        setSuccessMessage(result.message);
+        await loadUsers();
+      }
+    } catch {
+      setErrorMessage("Network error. Please try again.");
+    } finally {
+      setSavingId("");
     }
-
-    setSavingId("");
   }
 
   if (currentRole !== "admin" && currentRole !== "super_admin") {
@@ -142,7 +147,6 @@ export default function UserManagement({
 
   return (
     <div className="space-y-5">
-
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           ["Total customers", users.length],
@@ -163,7 +167,6 @@ export default function UserManagement({
       </div>
 
       <div className="rounded-2xl border border-[#24452b] bg-[#09170e] p-4">
-
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-bold text-white">Live customer records</h2>
@@ -294,5 +297,4 @@ export default function UserManagement({
       </div>
     </div>
   );
-}
-  
+        }
