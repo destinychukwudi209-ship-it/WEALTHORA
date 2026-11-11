@@ -25,6 +25,12 @@ const adminLink = {
   icon: "♛",
 };
 
+const withdrawalLink = {
+  href: "/admin/withdrawals",
+  label: "Withdrawal Management",
+  icon: "⇧",
+};
+
 export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -33,8 +39,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [isOnline, setIsOnline] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [canManageWithdrawals, setCanManageWithdrawals] = useState(false);
 
-  const visibleLinks = isAdmin ? [...links, adminLink] : links;
+  const visibleLinks = isAdmin
+    ? [
+        ...links,
+        adminLink,
+        ...(canManageWithdrawals ? [withdrawalLink] : []),
+      ]
+    : links;
 
   useEffect(() => {
     let active = true;
@@ -47,7 +60,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        if (active) setIsAdmin(false);
+        if (active) {
+          setIsAdmin(false);
+          setCanManageWithdrawals(false);
+        }
         return;
       }
 
@@ -60,11 +76,17 @@ export function Shell({ children }: { children: React.ReactNode }) {
       const allowedRoles = ["admin", "super_admin", "finance", "support"];
 
       if (active) {
-        setIsAdmin(
+        const activeAdmin =
           !error &&
           !!profile &&
           allowedRoles.includes(profile.role) &&
-          profile.status === "active"
+          profile.status === "active";
+
+        setIsAdmin(activeAdmin);
+
+        setCanManageWithdrawals(
+          activeAdmin &&
+            ["admin", "super_admin"].includes(profile?.role ?? "")
         );
       }
     }
@@ -355,5 +377,4 @@ export function PageTitle({
       </p>
     </div>
   );
-        }
-                    
+              }
