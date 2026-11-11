@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 
 export default function Login() {
   const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -15,6 +16,7 @@ export default function Login() {
 
   async function handleLogin(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
     if (loading) return;
 
     setLoading(true);
@@ -29,7 +31,9 @@ export default function Login() {
       });
 
       if (error || !data.user) {
-        setMessage("Incorrect email or password. Please check and try again.");
+        setMessage(
+          "Incorrect email or password. Please check and try again."
+        );
         return;
       }
 
@@ -41,33 +45,54 @@ export default function Login() {
 
       if (profileError || !profile) {
         await supabase.auth.signOut();
-        setMessage("We could not verify your account. Please contact support.");
-        return;
-      }
 
-      if (["suspended", "frozen", "closed"].includes(profile.status)) {
-        await supabase.auth.signOut();
-        router.replace(
-          `/account-restricted?status=${encodeURIComponent(profile.status)}`
+        setMessage(
+          "We could not verify your account. Please contact support."
         );
         return;
       }
 
-      if (profile.status !== "active") {
+      const status = String(profile.status || "").toLowerCase();
+
+      if (["suspended", "frozen", "closed"].includes(status)) {
         await supabase.auth.signOut();
-        setMessage("Your account is not active yet. Please contact support.");
+
+        router.replace(
+          `/app/account-restricted?status=${encodeURIComponent(status)}`
+        );
+
         return;
       }
 
-      const adminRoles = ["admin", "super_admin", "finance", "support"];
+      if (status !== "active") {
+        await supabase.auth.signOut();
 
-      router.replace(
-        adminRoles.includes(profile.role) ? "/admin" : "/dashboard"
-      );
+        setMessage(
+          "Your account is not active yet. Please contact support."
+        );
+        return;
+      }
+
+      const adminRoles = [
+        "admin",
+        "super_admin",
+        "finance",
+        "support",
+      ];
+
+      if (adminRoles.includes(profile.role)) {
+        router.replace("/admin");
+      } else {
+        router.replace("/dashboard");
+      }
+
       router.refresh();
     } catch {
       await supabase.auth.signOut();
-      setMessage("Unable to sign in. Please check your internet connection.");
+
+      setMessage(
+        "Unable to sign in. Please check your internet connection."
+      );
     } finally {
       setLoading(false);
     }
@@ -83,12 +108,16 @@ export default function Login() {
           <h1 className="text-4xl font-black tracking-[0.08em]">
             <span className="text-[#b7ff36]">WEALTH</span>ORA
           </h1>
+
           <p className="mt-5 text-[#929b94]">
             Your financial growth platform
           </p>
         </div>
 
-        <h2 className="text-3xl font-bold">Welcome Back</h2>
+        <h2 className="text-3xl font-bold">
+          Welcome Back
+        </h2>
+
         <p className="mb-8 mt-3 text-[#929b94]">
           Sign in to access your account.
         </p>
@@ -96,6 +125,7 @@ export default function Login() {
         <div className="grid gap-6">
           <label className="grid gap-3 font-medium">
             Email Address
+
             <input
               className="w-full rounded-2xl bg-[#e8f0ff] px-5 py-5 text-[#111827]"
               type="email"
@@ -109,6 +139,7 @@ export default function Login() {
 
           <label className="grid gap-3 font-medium">
             Password
+
             <input
               className="w-full rounded-2xl bg-[#e8f0ff] px-5 py-5 text-[#111827]"
               type="password"
@@ -130,16 +161,26 @@ export default function Login() {
         </button>
 
         {message && (
-          <p role="alert" className="mt-4 rounded-xl bg-red-950/40 p-3 text-sm text-red-300">
+          <p
+            role="alert"
+            className="mt-4 rounded-xl bg-red-950/40 p-3 text-sm text-red-300"
+          >
             {message}
           </p>
         )}
 
         <div className="mt-8 flex justify-between gap-4 text-sm font-semibold">
-          <Link href="/forgot-password" className="text-[#b7ff36]">
+          <Link
+            href="/forgot-password"
+            className="text-[#b7ff36]"
+          >
             Forgot Password?
           </Link>
-          <Link href="/register" className="text-[#b7ff36]">
+
+          <Link
+            href="/register"
+            className="text-[#b7ff36]"
+          >
             Create Account
           </Link>
         </div>
