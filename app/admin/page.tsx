@@ -1,3 +1,4 @@
+
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { Shell, PageTitle } from "@/components/shell";
@@ -11,7 +12,7 @@ const modules = [
   { name: "Investment products", description: "Manage available investment plans.", href: null },
   { name: "Referral review", description: "Review referral activity and commissions.", href: null },
   { name: "Promo campaigns", description: "Manage promotional campaigns.", href: null },
-  { name: "Announcements", description: "Publish platform announcements.", href: null },
+  { name: "Announcements", description: "Publish platform announcements.", href: "/admin/notifications" },
   { name: "Support inbox", description: "View customer tickets and reply to support requests.", href: "/admin/support" },
   { name: "Fraud monitoring", description: "Review suspicious account activity.", href: null },
   { name: "Financial reconciliation", description: "Review and reconcile financial records.", href: null },
@@ -77,10 +78,16 @@ export default async function Admin() {
 
         {modules.map((module) =>
           module.href ? (
-            <Link key={module.name} href={module.href} className="rounded-2xl border border-lime-500/40 bg-[#10291a] p-5 transition hover:border-lime-300">
+            <Link
+              key={module.name}
+              href={module.href}
+              className="rounded-2xl border border-lime-500/40 bg-[#10291a] p-5 transition hover:border-lime-300"
+            >
               <h3 className="font-bold text-lime-300">{module.name}</h3>
               <p className="mt-2 text-xs text-gray-300">{module.description}</p>
-              <p className="mt-4 text-sm font-bold text-white">Open support inbox →</p>
+              <p className="mt-4 text-sm font-bold text-white">
+                Open {module.name.toLowerCase()} →
+              </p>
             </Link>
           ) : (
             <div key={module.name} className="rounded-2xl border border-[#24452b] bg-[#09170e] p-5">
