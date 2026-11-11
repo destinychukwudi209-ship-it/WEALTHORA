@@ -42,7 +42,6 @@ async function verifyAdmin() {
   return { user };
 }
 
-// Securely load customer records.
 export async function GET() {
   try {
     const auth = await verifyAdmin();
@@ -64,7 +63,6 @@ export async function GET() {
 
     if (error) {
       console.error("Customer records error:", error);
-
       return NextResponse.json(
         { message: "Unable to load customer records." },
         { status: 500 }
@@ -77,7 +75,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Customer GET API error:", error);
-
     return NextResponse.json(
       { message: "Unexpected server error." },
       { status: 500 }
@@ -85,7 +82,6 @@ export async function GET() {
   }
 }
 
-// Change a customer account status.
 export async function POST(request: NextRequest) {
   try {
     const auth = await verifyAdmin();
@@ -107,14 +103,10 @@ export async function POST(request: NextRequest) {
     }
 
     const targetUserId =
-      typeof body.userId === "string"
-        ? body.userId.trim()
-        : "";
+      typeof body.userId === "string" ? body.userId.trim() : "";
 
     const newStatus =
-      typeof body.status === "string"
-        ? body.status
-        : "";
+      typeof body.status === "string" ? body.status : "";
 
     if (
       !targetUserId ||
@@ -141,7 +133,6 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error("Status update error:", error);
-
       return NextResponse.json(
         { message: `Database error ${error.code}: ${error.message}` },
         { status: 500 }
@@ -163,10 +154,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Admin status API error:", error);
-
     return NextResponse.json(
       { message: "Unexpected server error." },
       { status: 500 }
     );
   }
-        }
+      }
