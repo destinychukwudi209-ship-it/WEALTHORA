@@ -3,10 +3,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/admin";
 
-const allowedStatuses = ["active", "suspended", "frozen", "closed"];
+const allowedStatuses = [
+  "active",
+  "suspended",
+  "frozen",
+  "closed",
+] as const;
 
 export async function POST(request: NextRequest) {
   try {
+    // Verify the signed-in user.
     const supabase = await createClient();
 
     const {
@@ -21,6 +27,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Verify that the signed-in user is an authorized administrator.
     const { data: adminProfile, error: adminError } =
       await supabase
         .from("profiles")
@@ -34,12 +41,18 @@ export async function POST(request: NextRequest) {
       !["admin", "super_admin"].includes(adminProfile.role)
     ) {
       return NextResponse.json(
-        { message: "You are not authorized to manage accounts." },
+        {
+          message: "You are not authorized to manage accounts.",
+        },
         { status: 403 }
       );
     }
 
-    let body: { userId?: unknown; status?: unknown };
+    // Read and validate the request.
+    let body: {
+      userId?: unknown;
+      status?: unknown;
+    };
 
     try {
       body = await request.json();
@@ -51,44 +64,69 @@ export async function POST(request: NextRequest) {
     }
 
     const targetUserId =
-      typeof body.userId === "string" ? body.userId : "";
+      typeof body.userId === "string"
+        ? body.userId.trim()
+        : "";
 
     const newStatus =
-      typeof body.status === "string" ? body.status : "";
+      typeof body.status === "string"
+        ? body.status
+        : "";
 
     if (
       !targetUserId ||
       targetUserId === user.id ||
-      !allowedStatuses.includes(newStatus)
+      !allowedStatuses.includes(
+        newStatus as (typeof allowedStatuses)[number]
+      )
     ) {
       return NextResponse.json(
-        { message: "Invalid customer account or status." },
+        {
+          message: "Invalid customer account or status.",
+        },
         { status: 400 }
       );
     }
 
+    // Use the service-role client only after admin verification.
     const admin = await createAdminClient();
 
-    const { data: target, error: targetError } = await admin
-      .from("profiles")
-      .select("id, role")
-      .eq("id", targetUserId)
-      .maybeSingle();
+    // Confirm that the target is a customer account.
+    const { data: target, error: targetError } =
+      await admin
+        .from("profiles")
+        .select("id, role")
+        .eq("id", targetUserId)
+        .maybeSingle();
 
-    if (targetError || !target || target.role !== "customer") {
+    if (targetError) {
+      console.error(
+        "Target account lookup failed:",
+        targetError.message
+      );
+
+      return NextResponse.json(
+        { message: "Unable to find the customer account." },
+        { status: 500 }
+      );
+    }
+
+    if (!target || target.role !== "customer") {
       return NextResponse.json(
         { message: "Customer account not found." },
         { status: 404 }
       );
     }
 
-    const { data: updated, error: updateError } = await admin
-      .from("profiles")
-      .update({ status: newStatus })
-      .eq("id", targetUserId)
-      .eq("role", "customer")
-      .select("id")
-      .maybeSingle();
+    // Update the customer's account status.
+    const { data: updated, error: updateError } =
+      await admin
+        .from("profiles")
+        .update({ status: newStatus })
+        .eq("id", targetUserId)
+        .eq("role", "customer")
+        .select("id")
+        .maybeSingle();
 
     if (updateError || !updated) {
       console.error(
@@ -97,7 +135,9 @@ export async function POST(request: NextRequest) {
       );
 
       return NextResponse.json(
-        { message: "Unable to update customer account status." },
+        {
+          message: "Unable to update customer account status.",
+        },
         { status: 500 }
       );
     }
@@ -105,6 +145,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       message: "Customer account status updated successfully.",
+      userId: updated.id,
+      status: newStatus,
     });
   } catch (error) {
     console.error("Admin status API error:", error);
@@ -114,5 +156,5 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-          }
+        }
       
