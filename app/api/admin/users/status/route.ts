@@ -10,51 +10,96 @@ const allowedStatuses = [
   "closed",
 ] as const;
 
+async function verifyAdmin() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { error: "Please sign in again.", status: 401 };
+  }
+
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (
+    error ||
+    !profile ||
+    !["admin", "super_admin"].includes(profile.role)
+  ) {
+    return {
+      error: "You are not authorized to manage accounts.",
+      status: 403,
+    };
+  }
+
+  return { user };
+}
+
+// Securely load customer records.
+export async function GET() {
+  try {
+    const auth = await verifyAdmin();
+
+    if ("error" in auth) {
+      return NextResponse.json(
+        { message: auth.error },
+        { status: auth.status }
+      );
+    }
+
+    const admin = await createAdminClient();
+
+    const { data, error } = await admin
+      .from("profiles")
+      .select("id, full_name, role, status, created_at")
+      .eq("role", "customer")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Customer records error:", error);
+
+      return NextResponse.json(
+        { message: "Unable to load customer records." },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      customers: data || [],
+    });
+  } catch (error) {
+    console.error("Customer GET API error:", error);
+
+    return NextResponse.json(
+      { message: "Unexpected server error." },
+      { status: 500 }
+    );
+  }
+}
+
+// Change a customer account status.
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const auth = await verifyAdmin();
 
-    // Verify signed-in administrator.
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    if ("error" in auth) {
       return NextResponse.json(
-        { message: "Please sign in again." },
-        { status: 401 }
+        { message: auth.error },
+        { status: auth.status }
       );
     }
 
-    // Check administrator permissions.
-    const { data: adminProfile, error: adminError } =
-      await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
+    const body = await request.json().catch(() => null);
 
-    if (
-      adminError ||
-      !adminProfile ||
-      !["admin", "super_admin"].includes(adminProfile.role)
-    ) {
-      return NextResponse.json(
-        { message: "You are not authorized to manage accounts." },
-        { status: 403 }
-      );
-    }
-
-    // Read request body.
-    let body: {
-      userId?: unknown;
-      status?: unknown;
-    };
-
-    try {
-      body = await request.json();
-    } catch {
+    if (!body || typeof body !== "object") {
       return NextResponse.json(
         { message: "Invalid request body." },
         { status: 400 }
@@ -73,7 +118,7 @@ export async function POST(request: NextRequest) {
 
     if (
       !targetUserId ||
-      targetUserId === user.id ||
+      targetUserId === auth.user.id ||
       !allowedStatuses.includes(
         newStatus as (typeof allowedStatuses)[number]
       )
@@ -84,42 +129,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create server-side admin client.
     const admin = await createAdminClient();
 
-    // Update customer profile.
-    const { data: updated, error: updateError } =
-      await admin
-        .from("profiles")
-        .update({ status: newStatus })
-        .eq("id", targetUserId)
-        .eq("role", "customer")
-        .select("id, role, status")
-        .maybeSingle();
+    const { data: updated, error } = await admin
+      .from("profiles")
+      .update({ status: newStatus })
+      .eq("id", targetUserId)
+      .eq("role", "customer")
+      .select("id, role, status")
+      .maybeSingle();
 
-    if (updateError) {
-      console.error("STATUS UPDATE DIAGNOSTIC:", {
-        code: updateError.code,
-        message: updateError.message,
-        details: updateError.details,
-        hint: updateError.hint,
-      });
+    if (error) {
+      console.error("Status update error:", error);
 
       return NextResponse.json(
-        {
-          message:
-            `Database error ${updateError.code}: ${updateError.message}`,
-        },
+        { message: `Database error ${error.code}: ${error.message}` },
         { status: 500 }
       );
     }
 
     if (!updated) {
       return NextResponse.json(
-        {
-          message:
-            "No matching customer profile was updated. Check the customer ID and role.",
-        },
+        { message: "Customer profile was not found." },
         { status: 404 }
       );
     }
@@ -134,9 +165,8 @@ export async function POST(request: NextRequest) {
     console.error("Admin status API error:", error);
 
     return NextResponse.json(
-      { message: "An unexpected server error occurred." },
+      { message: "Unexpected server error." },
       { status: 500 }
     );
   }
-      }
-      
+        }
