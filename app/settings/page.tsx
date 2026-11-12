@@ -84,6 +84,7 @@ export default function Settings() {
 
     async function loadSettings() {
       const supabase = createClient();
+
       const { data, error } = await supabase.auth.getUser();
 
       if (!active) return;
@@ -97,6 +98,7 @@ export default function Settings() {
       setEmail(data.user.email ?? "");
 
       const verified = Boolean(data.user.email_confirmed_at);
+
       setVerification(verified ? "verified" : "unverified");
 
       if (!verified) {
@@ -115,6 +117,7 @@ export default function Settings() {
             ? `${statusError.message} (code: ${statusError.code ?? "unknown"})`
             : JSON.stringify(status)
         );
+
         setPinState("error");
         return;
       }
@@ -195,7 +198,9 @@ export default function Settings() {
       );
 
       if (error) {
-        setPinMessage("Unable to save your PIN. Please try again.");
+        setPinMessage(
+          "Unable to save your PIN. Please try again."
+        );
         return;
       }
 
@@ -210,8 +215,10 @@ export default function Settings() {
         };
 
         setPinMessage(
-          messages[data?.code] ?? "PIN could not be saved. Please try again."
+          messages[data?.code] ??
+            "PIN could not be saved. Please try again."
         );
+
         return;
       }
 
@@ -219,7 +226,10 @@ export default function Settings() {
       setCurrentPin("");
       setNewPin("");
       setConfirmPin("");
-      setPinMessage("Your Transaction PIN has been saved successfully.");
+
+      setPinMessage(
+        "Your Transaction PIN has been saved successfully and is available for withdrawal authorization."
+      );
     } catch {
       setPinMessage("Something went wrong. Please try again.");
     } finally {
@@ -419,8 +429,10 @@ export default function Settings() {
               )}
 
               <p className="muted mt-3 text-xs">
-                Never share your PIN with anyone. This setup is not yet
-                connected to withdrawal or payment authorization.
+                Your Transaction PIN is used by the secure withdrawal
+                request function to authorize withdrawal requests.
+                Never share your PIN with anyone. Other payment
+                authorization features may require separate implementation.
               </p>
             </>
           )}
@@ -440,9 +452,11 @@ export default function Settings() {
           <h2 className="font-semibold">
             Notification preferences 🔔
           </h2>
+
           <p className="muted mt-2 text-sm">
             Manage your ringing tune and phone notification settings.
           </p>
+
           <Link href="/notifications" className="btn mt-4 inline-block">
             Open notification settings
           </Link>
@@ -450,5 +464,5 @@ export default function Settings() {
       </div>
     </Shell>
   );
-        }
-                      
+      }
+                    
