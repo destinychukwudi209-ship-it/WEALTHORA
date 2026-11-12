@@ -199,7 +199,11 @@ export default function Settings() {
 
       if (error) {
         setPinMessage(
-          "Unable to save your PIN. Please try again."
+          `Database error: ${error.message} | Code: ${
+            error.code ?? "unknown"
+          } | Details: ${error.details ?? "none"} | Hint: ${
+            error.hint ?? "none"
+          }`
         );
         return;
       }
@@ -216,7 +220,7 @@ export default function Settings() {
 
         setPinMessage(
           messages[data?.code] ??
-            "PIN could not be saved. Please try again."
+            `PIN could not be saved. Database response: ${JSON.stringify(data)}`
         );
 
         return;
@@ -230,8 +234,12 @@ export default function Settings() {
       setPinMessage(
         "Your Transaction PIN has been saved successfully and is available for withdrawal authorization."
       );
-    } catch {
-      setPinMessage("Something went wrong. Please try again.");
+    } catch (error) {
+      setPinMessage(
+        `Unexpected error: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     } finally {
       setSavingPin(false);
     }
@@ -423,7 +431,10 @@ export default function Settings() {
               </form>
 
               {pinMessage && (
-                <p role="status" className="mt-3 text-sm text-amber-300">
+                <p
+                  role="status"
+                  className="mt-3 break-words text-sm text-amber-300"
+                >
                   {pinMessage}
                 </p>
               )}
@@ -464,5 +475,4 @@ export default function Settings() {
       </div>
     </Shell>
   );
-      }
-                    
+  }
