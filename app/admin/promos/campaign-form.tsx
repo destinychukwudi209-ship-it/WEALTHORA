@@ -1,7 +1,7 @@
-
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 type RewardType = "discount" | "bonus" | "plan_benefit";
 
@@ -15,25 +15,30 @@ export default function CampaignForm() {
   const [expiresAt, setExpiresAt] = useState("");
   const [preview, setPreview] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  function handlePreview(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setError("");
-    setPreview(false);
-
-    if (!name.trim() || !code.trim() || !rewardValue.trim() || !maxClaims) {
-      setError("Please complete all required campaign details.");
-      return;
+  function validate() {
+    if (
+      !name.trim() ||
+      !code.trim() ||
+      !rewardValue.trim() ||
+      !maxClaims ||
+      !startsAt ||
+      !expiresAt
+    ) {
+      setError("Please complete all campaign details.");
+      return false;
     }
 
     if (!/^[A-Za-z0-9_-]{4,30}$/.test(code.trim())) {
       setError("Use 4–30 letters, numbers, hyphens or underscores for the code.");
-      return;
+      return false;
     }
 
     if (!Number.isInteger(Number(maxClaims)) || Number(maxClaims) < 1) {
       setError("Maximum claims must be a whole number greater than zero.");
-      return;
+      return false;
     }
 
     if (
@@ -41,184 +46,296 @@ export default function CampaignForm() {
       (!Number.isFinite(Number(rewardValue)) || Number(rewardValue) <= 0)
     ) {
       setError("Enter a valid reward amount.");
-      return;
+      return false;
     }
 
     if (rewardType === "discount" && Number(rewardValue) > 100) {
       setError("A percentage discount cannot exceed 100%.");
-      return;
+      return false;
     }
 
-    if (startsAt && expiresAt && new Date(expiresAt) <= new Date(startsAt)) {
+    if (rewardType === "plan_benefit" && !rewardValue.trim()) {
+      setError("Describe the investment-plan benefit.");
+      return false;
+    }
+
+    if (new Date(expiresAt) <= new Date(startsAt)) {
       setError("The end date must be later than the start date.");
+      return false;
+    }
+
+    if (
+      Number.isNaN(new Date(startsAt).getTime()) ||
+      Number.isNaN(new Date(expiresAt).getTime())
+    ) {
+      setError("Please enter valid campaign dates.");
+      return false;
+    }
+
+    return true;
+  }
+
+  function handlePreview(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setPreview(false);
+
+    if (validate()) {
+      setPreview(true);
+    }
+  }
+
+  async function handleSave() {
+    setError("");
+    setSuccess("");
+
+    if (!validate()) {
+      setPreview(false);
       return;
     }
 
-    setPreview(true);
+    setSaving(true);
+
+    try {
+      const supabase = createClient();
+
+      const { error: saveError } = await supabase.rpc(
+        "admin_create_promo_campaign",
+        {
+          p_campaign_name: name.trim(),
+          p_code: code.trim().toUpperCase(),
+          p_reward_type:
+            rewardType === "discount"
+              ? "percentage_discount"
+              : rewardType === "bonus"
+                ? "fixed_bonus"
+                : "plan_benefit",
+          p_reward_value:
+            rewardType === "plan_benefit" ? null : Number(rewardValue),
+          p_reward_details:
+            rewardType === "plan_benefit" ? rewardValue.trim() : null,
+          p_max_claims: Number(maxClaims),
+          p_starts_at: new Date(startsAt).toISOString(),
+          p_ends_at: new Date(expiresAt).toISOString(),
+        }
+      );
+
+      if (saveError) {
+        throw saveError;
+      }
+
+      setSuccess(
+        "Campaign saved successfully as a draft. It is not published yet."
+      );
+
+      setName("");
+      setCode("");
+      setRewardType("discount");
+      setRewardValue("");
+      setMaxClaims("");
+      setStartsAt("");
+      setExpiresAt("");
+      setPreview(false);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to save campaign. Please try again."
+      );
+    } finally {
+      setSaving(false);
+    }
   }
 
   const rewardLabel =
     rewardType === "discount"
       ? `${rewardValue}% discount`
       : rewardType === "bonus"
-        ? `₦${Number(rewardValue).toLocaleString("en-NG")} bonus`
+        ? `₦${Number(rewardValue).toLocaleString("en-NG")} Task Balance bonus`
         : rewardValue;
 
   return (
     <section className="rounded-2xl border border-[#31583a] bg-[#09170e] p-4 sm:p-6">
-      <h2 className="text-lg font-extrabold text-white">Create a campaign</h2>
+      <h2 className="text-lg font-extrabold text-white">
+        Create a campaign
+      </h2>
+
       <p className="mt-1 text-sm text-gray-400">
-        Enter campaign details and preview them before database publishing is enabled.
+        Create and save promotional campaigns. New campaigns are saved as
+        drafts until an administrator publishes them.
       </p>
 
       <form onSubmit={handlePreview} className="mt-6 space-y-5">
         <div>
-          <label className="mb-2 block text-sm font-semibold text-gray-200">
-            Campaign name *
+          <label className="mb-2 block text-sm text-gray-300">
+            Campaign name
           </label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            maxLength={80}
-            placeholder="Example: Welcome Campaign"
-            className="w-full rounded-xl border border-[#31583a] bg-[#10291a] p-3 text-white placeholder:text-gray-500"
+            className="w-full rounded-xl border border-[#31583a] bg-[#10291a] p-3 text-white"
+            placeholder="e.g. Welcome promotion"
           />
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-semibold text-gray-200">
-            Promo code *
+          <label className="mb-2 block text-sm text-gray-300">
+            Promo code
           </label>
           <input
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
-            maxLength={30}
-            placeholder="WELCOME2026"
-            className="w-full rounded-xl border border-[#31583a] bg-[#10291a] p-3 uppercase text-white placeholder:text-gray-500"
+            className="w-full rounded-xl border border-[#31583a] bg-[#10291a] p-3 uppercase text-white"
+            placeholder="e.g. WELCOME2026"
           />
           <p className="mt-1 text-xs text-gray-500">
-            Codes will be checked for duplicates when connected to the database.
+            Customers will enter this code on their promo screen.
           </p>
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-semibold text-gray-200">
-            Reward type *
+          <label className="mb-2 block text-sm text-gray-300">
+            Reward type
           </label>
           <select
             value={rewardType}
             onChange={(e) => {
               setRewardType(e.target.value as RewardType);
-              setPreview(false);
+              setRewardValue("");
             }}
             className="w-full rounded-xl border border-[#31583a] bg-[#10291a] p-3 text-white"
           >
             <option value="discount">Percentage discount</option>
-            <option value="bonus">Fixed bonus amount</option>
-            <option value="plan_benefit">Extra investment-plan benefit</option>
+            <option value="bonus">Fixed Task Balance bonus</option>
+            <option value="plan_benefit">Investment plan benefit</option>
           </select>
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-semibold text-gray-200">
-            {rewardType === "plan_benefit"
-              ? "Benefit description *"
-              : rewardType === "discount"
-                ? "Discount percentage *"
-                : "Bonus amount in naira *"}
+          <label className="mb-2 block text-sm text-gray-300">
+            {rewardType === "discount"
+              ? "Discount percentage"
+              : rewardType === "bonus"
+                ? "Bonus amount (₦)"
+                : "Describe the plan benefit"}
           </label>
           <input
             value={rewardValue}
             onChange={(e) => setRewardValue(e.target.value)}
+            type={rewardType === "plan_benefit" ? "text" : "number"}
+            min={rewardType === "plan_benefit" ? undefined : "0.01"}
+            max={rewardType === "discount" ? "100" : undefined}
+            step={rewardType === "plan_benefit" ? undefined : "0.01"}
+            className="w-full rounded-xl border border-[#31583a] bg-[#10291a] p-3 text-white"
             placeholder={
               rewardType === "discount"
-                ? "10"
+                ? "e.g. 10"
                 : rewardType === "bonus"
-                  ? "5000"
-                  : "Describe the plan benefit"
+                  ? "e.g. 500"
+                  : "e.g. Extra plan benefit details"
             }
-            className="w-full rounded-xl border border-[#31583a] bg-[#10291a] p-3 text-white placeholder:text-gray-500"
           />
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-semibold text-gray-200">
-            Maximum number of claims *
+          <label className="mb-2 block text-sm text-gray-300">
+            Maximum number of claims
           </label>
           <input
+            value={maxClaims}
+            onChange={(e) => setMaxClaims(e.target.value)}
             type="number"
             min="1"
             step="1"
-            value={maxClaims}
-            onChange={(e) => setMaxClaims(e.target.value)}
-            placeholder="Example: 100"
-            className="w-full rounded-xl border border-[#31583a] bg-[#10291a] p-3 text-white placeholder:text-gray-500"
+            className="w-full rounded-xl border border-[#31583a] bg-[#10291a] p-3 text-white"
+            placeholder="Enter the total claim limit"
           />
-          <p className="mt-1 text-xs text-gray-500">
-            The system will stop accepting claims when this limit is reached.
-          </p>
         </div>
 
-        <div className="grid gap-5 sm:grid-cols-2">
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-gray-200">
-              Start date and time
-            </label>
-            <input
-              type="datetime-local"
-              value={startsAt}
-              onChange={(e) => setStartsAt(e.target.value)}
-              className="w-full rounded-xl border border-[#31583a] bg-[#10291a] p-3 text-white"
-            />
-          </div>
+        <div>
+          <label className="mb-2 block text-sm text-gray-300">
+            Campaign start date and time
+          </label>
+          <input
+            value={startsAt}
+            onChange={(e) => setStartsAt(e.target.value)}
+            type="datetime-local"
+            className="w-full rounded-xl border border-[#31583a] bg-[#10291a] p-3 text-white"
+          />
+        </div>
 
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-gray-200">
-              End date and time
-            </label>
-            <input
-              type="datetime-local"
-              value={expiresAt}
-              onChange={(e) => setExpiresAt(e.target.value)}
-              className="w-full rounded-xl border border-[#31583a] bg-[#10291a] p-3 text-white"
-            />
-          </div>
+        <div>
+          <label className="mb-2 block text-sm text-gray-300">
+            Campaign end date and time
+          </label>
+          <input
+            value={expiresAt}
+            onChange={(e) => setExpiresAt(e.target.value)}
+            type="datetime-local"
+            className="w-full rounded-xl border border-[#31583a] bg-[#10291a] p-3 text-white"
+          />
         </div>
 
         {error && (
-          <p role="alert" className="rounded-xl border border-red-500/40 bg-red-950/30 p-3 text-sm text-red-300">
+          <p className="rounded-xl border border-red-500/30 bg-red-950/30 p-3 text-sm text-red-300">
             {error}
           </p>
         )}
 
-        <button
-          type="submit"
-          className="w-full rounded-xl bg-[#b7ff35] px-5 py-4 font-extrabold text-[#071b10]"
-        >
-          Preview campaign
-        </button>
+        {success && (
+          <p className="rounded-xl border border-green-500/30 bg-green-950/30 p-3 text-sm text-green-300">
+            {success}
+          </p>
+        )}
+
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <button
+            type="submit"
+            className="rounded-xl border border-[#b7ff35] px-5 py-3 font-bold text-[#b7ff35]"
+          >
+            Preview campaign
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="rounded-xl bg-[#b7ff35] px-5 py-3 font-extrabold text-black disabled:opacity-50"
+          >
+            {saving ? "Saving..." : "Save campaign as draft"}
+          </button>
+        </div>
       </form>
 
       {preview && (
-        <div className="mt-6 rounded-2xl border border-[#426b37] bg-[#10291a] p-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-[#b7ff35]">
-            Campaign preview only
+        <div className="mt-6 rounded-xl border border-[#b7ff35]/40 bg-[#10291a] p-4">
+          <h3 className="font-bold text-[#b7ff35]">Campaign preview</h3>
+          <p className="mt-3 text-sm text-gray-300">
+            Campaign: <strong className="text-white">{name}</strong>
           </p>
-          <h3 className="mt-3 text-lg font-extrabold text-white">{name}</h3>
           <p className="mt-2 text-sm text-gray-300">
-            Promo code: <strong className="text-white">{code}</strong>
+            Code: <strong className="text-white">{code}</strong>
           </p>
           <p className="mt-2 text-sm text-gray-300">
             Reward: <strong className="text-white">{rewardLabel}</strong>
           </p>
           <p className="mt-2 text-sm text-gray-300">
-            Maximum claims: <strong className="text-white">{maxClaims}</strong>
+            Maximum claims:{" "}
+            <strong className="text-white">{maxClaims}</strong>
           </p>
-          <p className="mt-4 text-xs text-amber-300">
-            This preview has not been saved or published. Database connection is still required.
+          <p className="mt-2 text-sm text-gray-300">
+            Starts: <strong className="text-white">{startsAt}</strong>
+          </p>
+          <p className="mt-2 text-sm text-gray-300">
+            Ends: <strong className="text-white">{expiresAt}</strong>
+          </p>
+          <p className="mt-3 text-xs text-gray-400">
+            Preview only. Saving creates a draft; customers cannot redeem it
+            until it is published.
           </p>
         </div>
       )}
     </section>
   );
-                                                          }
+}
