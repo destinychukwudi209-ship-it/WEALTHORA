@@ -11,7 +11,7 @@ const modules = [
   { name: "Withdrawal approvals", description: "Review customer withdrawal requests.", href: null },
   { name: "Investment products", description: "Manage available investment plans.", href: null },
   { name: "Referral review", description: "Review referral activity and commissions.", href: null },
-  { name: "Promo campaigns", description: "Manage promotional campaigns.", href: null },
+  { name: "Promo campaigns", description: "Create, manage and track promotional campaigns.", href: "/admin/promos" },
   { name: "Announcements", description: "Publish platform announcements.", href: "/admin/notifications" },
   { name: "Support inbox", description: "View customer tickets and reply to support requests.", href: "/admin/support" },
   { name: "Fraud monitoring", description: "Review suspicious account activity.", href: null },
@@ -100,4 +100,4 @@ export default async function Admin() {
       </div>
     </Shell>
   );
-}
+              }
