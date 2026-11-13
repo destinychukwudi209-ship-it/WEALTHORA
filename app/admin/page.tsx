@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 const modules = [
   { name: "KYC review", description: "Review customer identity verification.", href: null },
-  { name: "Deposit approvals", description: "Review and process customer deposit requests.", href: null },
+  { name: "Deposit approvals", description: "Review customer deposit requests and receipts.", href: "/admin/deposits" },
   { name: "Withdrawal approvals", description: "Review customer withdrawal requests.", href: null },
   { name: "Investment products", description: "Manage available investment plans.", href: null },
   { name: "Referral review", description: "Review referral activity and commissions.", href: null },
@@ -23,6 +23,13 @@ const modules = [
 
 export default async function Admin() {
   const { user, profile } = await requireAdmin();
+
+  if (
+    !["admin", "super_admin"].includes(profile.role) ||
+    profile.status !== "active"
+  ) {
+    return null;
+  }
 
   return (
     <Shell>
@@ -58,22 +65,43 @@ export default async function Admin() {
       </h2>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Link href="/admin/settings" className="rounded-2xl border border-lime-500/40 bg-[#10291a] p-5 transition hover:border-lime-300">
+        <Link
+          href="/admin/settings"
+          className="rounded-2xl border border-lime-500/40 bg-[#10291a] p-5 transition hover:border-lime-300"
+        >
           <h3 className="font-bold text-lime-300">Admin Settings</h3>
-          <p className="mt-2 text-xs text-gray-300">Manage platform details and administrator notification preferences.</p>
-          <p className="mt-4 text-sm font-bold text-white">Open admin settings →</p>
+          <p className="mt-2 text-xs text-gray-300">
+            Manage platform details and administrator notification preferences.
+          </p>
+          <p className="mt-4 text-sm font-bold text-white">
+            Open admin settings →
+          </p>
         </Link>
 
-        <Link href="/admin/deposit-accounts" className="rounded-2xl border border-lime-500/40 bg-[#10291a] p-5 transition hover:border-lime-300">
+        <Link
+          href="/admin/deposit-accounts"
+          className="rounded-2xl border border-lime-500/40 bg-[#10291a] p-5 transition hover:border-lime-300"
+        >
           <h3 className="font-bold text-lime-300">Deposit bank accounts</h3>
-          <p className="mt-2 text-xs text-gray-300">View and manage deposit account information.</p>
-          <p className="mt-4 text-sm font-bold text-white">Open deposit accounts →</p>
+          <p className="mt-2 text-xs text-gray-300">
+            View and manage deposit account information.
+          </p>
+          <p className="mt-4 text-sm font-bold text-white">
+            Open deposit accounts →
+          </p>
         </Link>
 
-        <Link href="/admin/users" className="rounded-2xl border border-lime-500/40 bg-[#10291a] p-5 transition hover:border-lime-300">
+        <Link
+          href="/admin/users"
+          className="rounded-2xl border border-lime-500/40 bg-[#10291a] p-5 transition hover:border-lime-300"
+        >
           <h3 className="font-bold text-lime-300">User management</h3>
-          <p className="mt-2 text-xs text-gray-300">View customer accounts and manage their account status.</p>
-          <p className="mt-4 text-sm font-bold text-white">Open user management →</p>
+          <p className="mt-2 text-xs text-gray-300">
+            View customer accounts and manage their account status.
+          </p>
+          <p className="mt-4 text-sm font-bold text-white">
+            Open user management →
+          </p>
         </Link>
 
         {modules.map((module) =>
@@ -84,21 +112,29 @@ export default async function Admin() {
               className="rounded-2xl border border-lime-500/40 bg-[#10291a] p-5 transition hover:border-lime-300"
             >
               <h3 className="font-bold text-lime-300">{module.name}</h3>
-              <p className="mt-2 text-xs text-gray-300">{module.description}</p>
+              <p className="mt-2 text-xs text-gray-300">
+                {module.description}
+              </p>
               <p className="mt-4 text-sm font-bold text-white">
                 Open {module.name.toLowerCase()} →
               </p>
             </Link>
           ) : (
-            <div key={module.name} className="rounded-2xl border border-[#24452b] bg-[#09170e] p-5">
+            <div
+              key={module.name}
+              className="rounded-2xl border border-[#24452b] bg-[#09170e] p-5"
+            >
               <h3 className="font-bold text-white">{module.name}</h3>
-              <p className="mt-2 text-xs text-gray-400">{module.description}</p>
-              <p className="mt-4 text-xs font-semibold text-lime-300">Coming soon</p>
+              <p className="mt-2 text-xs text-gray-400">
+                {module.description}
+              </p>
+              <p className="mt-4 text-xs font-semibold text-lime-300">
+                Coming soon
+              </p>
             </div>
           )
         )}
       </div>
     </Shell>
   );
-  }
-              
+          }
