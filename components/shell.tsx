@@ -10,6 +10,7 @@ const links = [
   { href: "/dashboard", label: "Overview", icon: "⌂" },
   { href: "/wallet", label: "Wallet", icon: "◈" },
   { href: "/invest", label: "Investments", icon: "↗" },
+  { href: "/tasks", label: "My Tasks", icon: "✓" },
   { href: "/transactions", label: "Transactions", icon: "⇄" },
   { href: "/referrals", label: "Referrals", icon: "♧" },
   { href: "/promos", label: "Promo codes", icon: "％" },
@@ -377,4 +378,5 @@ export function PageTitle({
       </p>
     </div>
   );
-              }
+        }
+            
