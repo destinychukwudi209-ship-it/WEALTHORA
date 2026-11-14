@@ -9,6 +9,8 @@ export default function ForgotPasswordPage() {
   const [otp, setOtp] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [stage, setStage] = useState<"email" | "otp" | "done">("email");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -31,7 +33,9 @@ export default function ForgotPasswordPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        setMessage(result.message || "Unable to process your request. Please try again.");
+        setMessage(
+          result.message || "Unable to process your request. Please try again."
+        );
         return;
       }
 
@@ -112,141 +116,224 @@ export default function ForgotPasswordPage() {
   }
 
   const fieldClass =
-    "w-full rounded-2xl border border-[#dce7f7] bg-[#e8f0ff] px-5 py-4 text-base text-[#111827] outline-none focus:border-[#b7ff36]";
+    "w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-base text-slate-900 outline-none transition focus:border-[#1646C8] focus:ring-4 focus:ring-blue-100";
 
   const buttonClass =
-    "w-full rounded-2xl bg-[#b7ff36] px-5 py-4 font-bold text-[#071006] disabled:opacity-50";
+    "w-full rounded-full bg-[#1646C8] px-5 py-4 font-extrabold text-white shadow-lg shadow-blue-100 transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50";
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#050806] px-4 py-10 text-white">
-      <section className="grid w-full max-w-[610px] gap-6 rounded-[30px] border border-[#293b27] bg-[#0e1712] px-7 py-10 sm:px-10">
-        <div className="text-center">
-          <h1 className="text-4xl font-black tracking-[0.08em]">
-            <span className="text-[#b7ff36]">WEALTH</span>ORA
-          </h1>
-          <p className="mt-4 text-[#929b94]">
-            Your financial growth platform
-          </p>
-        </div>
+    <main
+      className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F3F7FF] px-4 py-10 text-[#102C70]"
+      style={{
+        backgroundImage:
+          "linear-gradient(rgba(22,70,200,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(22,70,200,0.045) 1px, transparent 1px)",
+        backgroundSize: "48px 48px",
+      }}
+    >
+      <div className="pointer-events-none absolute -top-28 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-blue-200/50 blur-3xl" />
 
-        <div>
-          <h2 className="text-2xl font-bold">
-            {stage === "email" && "Forgot Password?"}
-            {stage === "otp" && "Verify Your Code"}
-            {stage === "done" && "Password Updated"}
-          </h2>
+      <div className="relative z-10 w-full max-w-[560px]">
+        <Link href="/" className="mb-9 flex flex-col items-center">
+          <span className="text-5xl font-black italic text-[#1646C8]">
+            W<span className="text-[#F5B82E]">↗</span>
+          </span>
 
-          <p className="mt-3 text-[#929b94]">
-            {stage === "email" &&
-              "Enter your registered email to receive a recovery code."}
-            {stage === "otp" &&
-              "Enter the 6-digit code sent to your email and choose a new password."}
-            {stage === "done" &&
-              "Your password recovery is complete. You can now sign in."}
-          </p>
-        </div>
+          <span className="mt-1 text-3xl font-black tracking-tight">
+            WEALTHORA
+          </span>
 
-        {stage === "email" && (
-          <form onSubmit={sendCode} className="grid gap-5">
-            <label className="grid gap-3 font-medium">
-              Email Address
-              <input
-                className={fieldClass}
-                type="email"
-                required
-                placeholder="Enter your email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </label>
+          <span className="mt-1 text-xs font-bold tracking-[0.25em] text-slate-500">
+            INVEST • EARN • GROW
+          </span>
+        </Link>
 
-            <button className={buttonClass} disabled={loading}>
-              {loading ? "Sending..." : "Send Recovery Code"}
-            </button>
-          </form>
-        )}
+        <section className="rounded-[2rem] border border-white bg-white px-6 py-8 shadow-xl shadow-blue-100/80 sm:px-10 sm:py-10">
+          <div className="mb-8 flex items-center justify-center gap-2">
+            <span
+              className={`h-2 flex-1 rounded-full ${
+                stage === "email" || stage === "otp" || stage === "done"
+                  ? "bg-[#1646C8]"
+                  : "bg-slate-200"
+              }`}
+            />
+            <span
+              className={`h-2 flex-1 rounded-full ${
+                stage === "otp" || stage === "done"
+                  ? "bg-[#1646C8]"
+                  : "bg-slate-200"
+              }`}
+            />
+            <span
+              className={`h-2 flex-1 rounded-full ${
+                stage === "done" ? "bg-[#1646C8]" : "bg-slate-200"
+              }`}
+            />
+          </div>
 
-        {stage === "otp" && (
-          <form onSubmit={verifyAndReset} className="grid gap-5">
-            <label className="grid gap-3 font-medium">
-              6-Digit Recovery Code
-              <input
-                className={fieldClass}
-                inputMode="numeric"
-                maxLength={6}
-                required
-                placeholder="Enter 6-digit code"
-                value={otp}
-                onChange={(e) =>
-                  setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
-                }
-              />
-            </label>
+          <div className="mb-8 text-center">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-3xl text-[#1646C8]">
+              {stage === "done" ? "✓" : "🔐"}
+            </div>
 
-            <label className="grid gap-3 font-medium">
-              New Password
-              <input
-                className={fieldClass}
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Create new password"
-              />
-            </label>
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
+              {stage === "email" && "Forgot Password?"}
+              {stage === "otp" && "Verify Your Code"}
+              {stage === "done" && "Password Updated"}
+            </h1>
 
-            <label className="grid gap-3 font-medium">
-              Confirm New Password
-              <input
-                className={fieldClass}
-                type="password"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirm new password"
-              />
-            </label>
+            <p className="mt-3 text-sm leading-6 text-slate-500 sm:text-base">
+              {stage === "email" &&
+                "Enter your registered email to receive a secure recovery code."}
+              {stage === "otp" &&
+                "Enter the six-digit code sent to your email and create a new password."}
+              {stage === "done" &&
+                "Your password recovery is complete. You can now sign in with your new password."}
+            </p>
+          </div>
 
-            <button className={buttonClass} disabled={loading}>
-              {loading ? "Verifying..." : "Verify Code and Reset Password"}
-            </button>
+          {stage === "email" && (
+            <form onSubmit={sendCode} className="grid gap-5">
+              <label className="grid gap-2 text-sm font-bold text-slate-800">
+                Email Address
 
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => sendCode()}
-              className="font-semibold text-[#b7ff36] disabled:opacity-50"
+                <input
+                  className={fieldClass}
+                  type="email"
+                  autoComplete="email"
+                  required
+                  placeholder="Enter your registered email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </label>
+
+              <button className={buttonClass} disabled={loading}>
+                {loading ? "Sending Recovery Code..." : "Send Recovery Code →"}
+              </button>
+            </form>
+          )}
+
+          {stage === "otp" && (
+            <form onSubmit={verifyAndReset} className="grid gap-5">
+              <label className="grid gap-2 text-sm font-bold text-slate-800">
+                Six-Digit Recovery Code
+
+                <input
+                  className={`${fieldClass} text-center text-xl font-extrabold tracking-[0.5em]`}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  required
+                  placeholder="000000"
+                  value={otp}
+                  onChange={(e) =>
+                    setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+                  }
+                />
+              </label>
+
+              <label className="grid gap-2 text-sm font-bold text-slate-800">
+                New Password
+
+                <div className="flex items-center rounded-2xl border border-slate-200 bg-slate-50 pr-3 focus-within:border-[#1646C8] focus-within:ring-4 focus-within:ring-blue-100">
+                  <input
+                    className="min-w-0 flex-1 bg-transparent px-5 py-4 text-base text-slate-900 outline-none"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Create a strong password"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((value) => !value)}
+                    className="px-2 py-2 text-sm font-bold text-[#1646C8]"
+                  >
+                    {showPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
+
+                <span className="text-xs font-normal text-slate-500">
+                  At least 12 characters with uppercase, lowercase, number and symbol.
+                </span>
+              </label>
+
+              <label className="grid gap-2 text-sm font-bold text-slate-800">
+                Confirm New Password
+
+                <div className="flex items-center rounded-2xl border border-slate-200 bg-slate-50 pr-3 focus-within:border-[#1646C8] focus-within:ring-4 focus-within:ring-blue-100">
+                  <input
+                    className="min-w-0 flex-1 bg-transparent px-5 py-4 text-base text-slate-900 outline-none"
+                    type={showConfirmPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Enter your new password again"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowConfirmPassword((value) => !value)
+                    }
+                    className="px-2 py-2 text-sm font-bold text-[#1646C8]"
+                  >
+                    {showConfirmPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
+              </label>
+
+              <button className={buttonClass} disabled={loading}>
+                {loading ? "Verifying..." : "Verify Code and Reset Password →"}
+              </button>
+
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => sendCode()}
+                className="rounded-full border border-blue-100 bg-blue-50 px-5 py-3 font-bold text-[#1646C8] disabled:opacity-50"
+              >
+                Resend Recovery Code
+              </button>
+            </form>
+          )}
+
+          {stage === "done" && (
+            <Link href="/login" className={`${buttonClass} block text-center`}>
+              Return to Sign In →
+            </Link>
+          )}
+
+          {message && (
+            <p
+              role="status"
+              className={`mt-6 rounded-2xl border p-4 text-sm leading-6 ${
+                stage === "done"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                  : "border-blue-100 bg-blue-50 text-blue-900"
+              }`}
             >
-              Resend Recovery Code
-            </button>
-          </form>
-        )}
+              {message}
+            </p>
+          )}
 
-        {stage === "done" && (
-          <Link href="/login" className={`${buttonClass} text-center`}>
-            Return to Sign In
-          </Link>
-        )}
+          {stage !== "done" && (
+            <Link
+              href="/login"
+              className="mt-7 block text-center text-sm font-bold text-[#1646C8] hover:underline"
+            >
+              ← Back to Sign In
+            </Link>
+          )}
+        </section>
 
-        {message && (
-          <p
-            role="status"
-            className="rounded-xl border border-[#526b36] bg-[#17251a] p-4 text-sm text-[#d9e7d6]"
-          >
-            {message}
-          </p>
-        )}
-
-        {stage !== "done" && (
-          <Link
-            href="/login"
-            className="text-center font-semibold text-[#b7ff36]"
-          >
-            Back to Sign In
-          </Link>
-        )}
-      </section>
+        <p className="mt-7 text-center text-xs text-slate-400">
+          © {new Date().getFullYear()} WEALTHORA. All rights reserved.
+        </p>
+      </div>
     </main>
   );
-        }
-                  
+    }
