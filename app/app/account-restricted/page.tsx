@@ -13,6 +13,7 @@ import {
 export const dynamic = "force-dynamic";
 
 type RestrictionStatus = "suspended" | "frozen" | "closed";
+type AccentType = "amber" | "blue" | "red";
 
 const restrictionDetails: Record<
   RestrictionStatus,
@@ -23,7 +24,7 @@ const restrictionDetails: Record<
     detail: string;
     icon: typeof ShieldAlert;
     statusLabel: string;
-    accent: string;
+    accent: AccentType;
   }
 > = {
   suspended: {
@@ -63,6 +64,31 @@ const restrictionDetails: Record<
   },
 };
 
+const accentStyles: Record<
+  AccentType,
+  {
+    icon: string;
+    label: string;
+    dot: string;
+  }
+> = {
+  amber: {
+    icon: "bg-amber-50 text-amber-600 border-amber-100",
+    label: "bg-amber-50 text-amber-700 border-amber-100",
+    dot: "bg-amber-500",
+  },
+  blue: {
+    icon: "bg-blue-50 text-[#1646C8] border-blue-100",
+    label: "bg-blue-50 text-[#1646C8] border-blue-100",
+    dot: "bg-blue-600",
+  },
+  red: {
+    icon: "bg-red-50 text-red-600 border-red-100",
+    label: "bg-red-50 text-red-700 border-red-100",
+    dot: "bg-red-500",
+  },
+};
+
 export default async function AccountRestrictedPage({
   searchParams,
 }: {
@@ -77,24 +103,7 @@ export default async function AccountRestrictedPage({
 
   const details = restrictionDetails[status];
   const StatusIcon = details.icon;
-
-  const accentStyles = {
-    amber: {
-      icon: "bg-amber-50 text-amber-600 border-amber-100",
-      label: "bg-amber-50 text-amber-700 border-amber-100",
-      dot: "bg-amber-500",
-    },
-    blue: {
-      icon: "bg-blue-50 text-[#1646C8] border-blue-100",
-      label: "bg-blue-50 text-[#1646C8] border-blue-100",
-      dot: "bg-blue-600",
-    },
-    red: {
-      icon: "bg-red-50 text-red-600 border-red-100",
-      label: "bg-red-50 text-red-700 border-red-100",
-      dot: "bg-red-500",
-    },
-  }[details.accent];
+  const styles = accentStyles[details.accent];
 
   return (
     <main
@@ -126,7 +135,7 @@ export default async function AccountRestrictedPage({
 
         <div className="mx-auto my-9 flex h-36 w-36 items-center justify-center rounded-full border border-blue-100 bg-blue-50">
           <div
-            className={`flex h-24 w-24 items-center justify-center rounded-full border ${accentStyles.icon}`}
+            className={`flex h-24 w-24 items-center justify-center rounded-full border ${styles.icon}`}
           >
             <StatusIcon className="h-12 w-12" />
           </div>
@@ -134,9 +143,9 @@ export default async function AccountRestrictedPage({
 
         <div className="text-center">
           <span
-            className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-extrabold tracking-widest ${accentStyles.label}`}
+            className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-extrabold tracking-widest ${styles.label}`}
           >
-            <span className={`h-2 w-2 rounded-full ${accentStyles.dot}`} />
+            <span className={`h-2 w-2 rounded-full ${styles.dot}`} />
             {details.statusLabel}
           </span>
 
@@ -209,5 +218,4 @@ export default async function AccountRestrictedPage({
       </section>
     </main>
   );
-    }
-            
+          }
