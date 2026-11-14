@@ -2,14 +2,16 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
+type CookieToSet = {
+  name: string;
+  value: string;
+  options?: any;
+};
+
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
-  const cookiesToSet: {
-    name: string;
-    value: string;
-    options?: any;
-  }[] = [];
+  const cookiesToSet: CookieToSet[] = [];
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,7 +21,8 @@ export async function middleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookies) {
+
+        setAll(cookies: CookieToSet[]) {
           cookies.forEach(({ name, value }) => {
             request.cookies.set(name, value);
           });
@@ -79,6 +82,7 @@ export async function middleware(request: NextRequest) {
   }
 
   response.headers.set("X-DNS-Prefetch-Control", "on");
+
   response.headers.set(
     "Strict-Transport-Security",
     "max-age=63072000; includeSubDomains; preload"
