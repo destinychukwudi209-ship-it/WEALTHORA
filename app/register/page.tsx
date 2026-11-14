@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, type FormEvent } from "react";
@@ -9,6 +10,8 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -59,7 +62,7 @@ export default function Register() {
 
       setSuccess(true);
       setMessage(
-        "Registration submitted. Please check your email for the verification link before signing in."
+        "Your registration has been submitted. Please check your email and verify your account before signing in."
       );
     } catch {
       setMessage("Unable to register right now. Please try again.");
@@ -69,130 +72,201 @@ export default function Register() {
   }
 
   const fieldClass =
-    "w-full rounded-2xl border border-[#dce7f7] bg-[#e8f0ff] px-5 py-5 text-base text-[#111827] outline-none focus:border-[#b7ff36] focus:ring-2 focus:ring-[#b7ff36]/30";
+    "w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-base text-slate-900 outline-none transition focus:border-[#1646C8] focus:ring-4 focus:ring-blue-100";
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#050806] px-4 py-10 text-white">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(91,150,25,0.12),_transparent_65%)]" />
+    <main
+      className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F3F7FF] px-4 py-10 text-[#102C70]"
+      style={{
+        backgroundImage:
+          "linear-gradient(rgba(22,70,200,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(22,70,200,0.045) 1px, transparent 1px)",
+        backgroundSize: "48px 48px",
+      }}
+    >
+      <div className="pointer-events-none absolute -top-28 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-blue-200/50 blur-3xl" />
 
-      <form
-        onSubmit={handleRegister}
-        className="relative z-10 grid w-full max-w-[610px] gap-6 rounded-[30px] border border-[#293b27] bg-[#0e1712] px-7 py-10 shadow-[0_20px_80px_rgba(0,0,0,0.55)] sm:px-10"
-      >
-        <div className="text-center">
-          <h1 className="text-4xl font-black tracking-[0.08em] sm:text-5xl">
-            <span className="text-[#b7ff36]">WEALTH</span>
-            <span className="text-white">ORA</span>
-          </h1>
-          <p className="mt-4 text-[#929b94] sm:text-xl">
-            Your financial growth platform
+      <div className="relative z-10 w-full max-w-[560px]">
+        <Link href="/" className="mb-8 flex flex-col items-center">
+          <span className="text-5xl font-black italic text-[#1646C8]">
+            W<span className="text-[#F5B82E]">↗</span>
+          </span>
+
+          <span className="mt-1 text-3xl font-black tracking-tight">
+            WEALTHORA
+          </span>
+
+          <span className="mt-1 text-xs font-bold tracking-[0.25em] text-slate-500">
+            INVEST • EARN • GROW
+          </span>
+        </Link>
+
+        <section className="rounded-[2rem] border border-white bg-white px-6 py-8 shadow-xl shadow-blue-100/80 sm:px-10 sm:py-10">
+          <div className="grid grid-cols-2 rounded-full border border-slate-100 bg-slate-50 p-1.5">
+            <Link
+              href="/login"
+              className="rounded-full px-3 py-3 text-center text-sm font-bold text-slate-600 hover:bg-blue-50"
+            >
+              Sign In
+            </Link>
+
+            <div className="rounded-full bg-[#1646C8] px-3 py-3 text-center text-sm font-extrabold text-white shadow-md">
+              Create Account
+            </div>
+          </div>
+
+          <div className="mb-7 mt-9 text-center">
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
+              Create your account
+            </h1>
+
+            <p className="mt-3 text-sm leading-6 text-slate-500 sm:text-base">
+              Join WEALTHORA and manage your account securely.
+            </p>
+          </div>
+
+          <form onSubmit={handleRegister} className="space-y-5">
+            <label className="block">
+              <span className="mb-2 block text-sm font-bold text-slate-800">
+                Full Name
+              </span>
+
+              <input
+                type="text"
+                autoComplete="name"
+                required
+                maxLength={100}
+                placeholder="Enter your full name"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className={fieldClass}
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-sm font-bold text-slate-800">
+                Email Address
+              </span>
+
+              <input
+                type="email"
+                autoComplete="email"
+                required
+                placeholder="name@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={fieldClass}
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-sm font-bold text-slate-800">
+                Password
+              </span>
+
+              <div className="flex items-center rounded-2xl border border-slate-200 bg-slate-50 pr-3 focus-within:border-[#1646C8] focus-within:ring-4 focus-within:ring-blue-100">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  required
+                  minLength={12}
+                  placeholder="Create a strong password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="min-w-0 flex-1 bg-transparent px-5 py-4 text-base text-slate-900 outline-none"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((value) => !value)}
+                  className="rounded-lg px-2 py-2 text-sm font-bold text-[#1646C8]"
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
+
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                At least 12 characters, with uppercase, lowercase, number and symbol.
+              </p>
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-sm font-bold text-slate-800">
+                Confirm Password
+              </span>
+
+              <div className="flex items-center rounded-2xl border border-slate-200 bg-slate-50 pr-3 focus-within:border-[#1646C8] focus-within:ring-4 focus-within:ring-blue-100">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  required
+                  placeholder="Enter your password again"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="min-w-0 flex-1 bg-transparent px-5 py-4 text-base text-slate-900 outline-none"
+                />
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowConfirmPassword((value) => !value)
+                  }
+                  className="rounded-lg px-2 py-2 text-sm font-bold text-[#1646C8]"
+                >
+                  {showConfirmPassword ? "Hide" : "Show"}
+                </button>
+              </div>
+            </label>
+
+            {message && (
+              <p
+                role="status"
+                className={`rounded-xl border p-4 text-sm leading-6 ${
+                  success
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                    : "border-red-200 bg-red-50 text-red-700"
+                }`}
+              >
+                {message}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading || success}
+              className="w-full rounded-full bg-[#1646C8] px-6 py-5 text-base font-extrabold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading
+                ? "Creating Account..."
+                : success
+                  ? "Registration Submitted"
+                  : "Create WEALTHORA Account →"}
+            </button>
+          </form>
+
+          <p className="mt-8 text-center text-sm text-slate-600">
+            Already have an account?{" "}
+            <Link
+              href="/login"
+              className="font-extrabold text-[#1646C8] hover:underline"
+            >
+              Sign In
+            </Link>
           </p>
-        </div>
+        </section>
 
-        <div>
-          <h2 className="text-3xl font-bold">Create Account</h2>
-          <p className="mt-3 text-[#929b94]">
-            Join WEALTHORA today.
-          </p>
-        </div>
-
-        <div>
-          <label htmlFor="fullName" className="mb-3 block font-medium text-[#e2e8e3]">
-            Full Name
-          </label>
-          <input
-            id="fullName"
-            className={fieldClass}
-            type="text"
-            autoComplete="name"
-            required
-            placeholder="Enter your full name"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-          />
-        </div>
-
-        <div>
-          <label htmlFor="email" className="mb-3 block font-medium text-[#e2e8e3]">
-            Email Address
-          </label>
-          <input
-            id="email"
-            className={fieldClass}
-            type="email"
-            autoComplete="email"
-            required
-            placeholder="Enter your email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
-
-        <div>
-          <label htmlFor="password" className="mb-3 block font-medium text-[#e2e8e3]">
-            Password
-          </label>
-          <input
-            id="password"
-            className={fieldClass}
-            type="password"
-            autoComplete="new-password"
-            required
-            minLength={12}
-            placeholder="Create a strong password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
-
-        <div>
-          <label htmlFor="confirmPassword" className="mb-3 block font-medium text-[#e2e8e3]">
-            Confirm Password
-          </label>
-          <input
-            id="confirmPassword"
-            className={fieldClass}
-            type="password"
-            autoComplete="new-password"
-            required
-            placeholder="Enter your password again"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading || success}
-          className="w-full rounded-2xl bg-[#b7ff36] px-5 py-5 text-xl font-bold text-[#071006] shadow-lg transition hover:bg-[#a8f329] disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {loading
-            ? "Creating Account..."
-            : success
-              ? "Registration Submitted"
-              : "Create Account"}
-        </button>
-
-        {message && (
-          <p
-            role="status"
-            className={`rounded-xl border p-4 text-sm ${
-              success
-                ? "border-[#526b36] bg-[#17251a] text-[#d9e7d6]"
-                : "border-red-500/30 bg-red-950/40 text-red-300"
-            }`}
+        <div className="mt-7 text-center">
+          <Link
+            href="/"
+            className="text-sm font-semibold text-[#1646C8]"
           >
-            {message}
-          </p>
-        )}
-
-        <p className="text-center text-sm text-[#929b94]">
-          Already have an account?{" "}
-          <Link href="/login" className="font-semibold text-[#b7ff36]">
-            Sign In
+            ← Back to WEALTHORA
           </Link>
-        </p>
-      </form>
+
+          <p className="mt-4 text-xs text-slate-400">
+            © {new Date().getFullYear()} WEALTHORA. All rights reserved.
+          </p>
+        </div>
+      </div>
     </main>
   );
-  }
+                  }
