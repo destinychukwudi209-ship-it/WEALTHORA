@@ -1,7 +1,7 @@
 
 import { requireAdmin } from "@/lib/auth";
 import { Shell, PageTitle } from "@/components/shell";
-import AdminSettingsForm from "./admin-settings-form";
+import AdminSettingsForm from "./settings/admin-settings-form";
 
 export const dynamic = "force-dynamic";
 
