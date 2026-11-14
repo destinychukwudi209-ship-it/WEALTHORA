@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Shell, PageTitle } from "@/components/shell";
+import DashboardShell from "@/components/dashboard-shell";
 import { createClient } from "@/lib/supabase/client";
 
 type Notice = {
@@ -197,6 +197,7 @@ export default function Notifications() {
     } = await supabase.auth.getUser();
 
     if (!user) {
+      setSoundEnabled(!value);
       setError("Please sign in again.");
       return;
     }
@@ -218,21 +219,43 @@ export default function Notifications() {
     }
   }
 
+  const card =
+    "rounded-2xl border border-blue-100 bg-white p-5 text-[#17366f] shadow-sm";
+
   return (
-    <Shell>
-      <PageTitle
-        title="Announcements & notifications"
-        subtitle="Your WEALTHORA alerts, messages and account updates."
-      />
+    <DashboardShell>
+      <div className="mb-6 rounded-3xl bg-gradient-to-r from-[#e4efff] to-[#e5f5ff] p-6">
+        <p className="text-sm font-semibold text-blue-700">
+          Account centre
+        </p>
+        <h1 className="mt-2 text-3xl font-extrabold text-[#153675]">
+          Notifications
+        </h1>
+        <p className="mt-2 text-sm text-blue-800">
+          Your WEALTHORA announcements, messages and account updates.
+        </p>
+      </div>
 
       <div className="space-y-5">
-        <section className="panel">
-          <h2 className="text-lg font-bold">Notification settings</h2>
-
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <section className={card}>
+          <div className="flex items-center gap-3">
+            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-blue-50 text-2xl">
+              🔔
+            </span>
             <div>
-              <p className="font-semibold">Ringing notification sound 🔔</p>
-              <p className="muted text-sm">
+              <h2 className="text-lg font-bold">Notification settings</h2>
+              <p className="text-sm text-slate-500">
+                Control how you receive your alerts.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-blue-50 p-4">
+            <div>
+              <p className="font-bold text-[#17366f]">
+                Ringing notification sound
+              </p>
+              <p className="mt-1 text-sm text-slate-600">
                 Play a tune when a new message arrives.
               </p>
             </div>
@@ -240,7 +263,9 @@ export default function Notifications() {
             <button
               type="button"
               onClick={() => void saveSound(!soundEnabled)}
-              className="btn"
+              className={`rounded-xl px-5 py-3 font-bold text-white ${
+                soundEnabled ? "bg-blue-700" : "bg-slate-500"
+              }`}
             >
               {soundEnabled ? "Sound ON" : "Sound OFF"}
             </button>
@@ -249,63 +274,86 @@ export default function Notifications() {
           <button
             type="button"
             onClick={() => void playRing()}
-            className="mt-4 rounded-xl border border-green-700 px-4 py-3 font-semibold text-green-800"
+            className="mt-4 w-full rounded-xl border border-blue-200 bg-white px-4 py-3 font-bold text-blue-800"
           >
-            Test ringing tune
+            ▶ Test ringing tune
           </button>
 
-          <div className="mt-5 border-t pt-4">
-            <p className="font-semibold">Android pop-up notifications</p>
-            <p className="muted mt-1 text-sm">
-              Browser permission: {permission}
+          <div className="mt-5 border-t border-blue-100 pt-5">
+            <h3 className="font-bold">Android phone notifications</h3>
+            <p className="mt-2 text-sm text-slate-600">
+              Permission status: {permission}
             </p>
 
             <button
               type="button"
               onClick={() => void enableNotifications()}
-              className="btn mt-3"
+              className="mt-3 w-full rounded-xl bg-blue-700 px-5 py-3 font-bold text-white"
             >
               Enable phone notifications
             </button>
           </div>
         </section>
 
-        <section className="panel">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-lg font-bold">Your messages</h2>
-            <span className="text-sm text-gray-500">
+        <section className={card}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold">Your messages</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Account alerts and announcements sent to you.
+              </p>
+            </div>
+
+            <span className="rounded-full bg-blue-100 px-3 py-2 text-sm font-bold text-blue-800">
               {items.filter((item) => !item.is_read).length} unread
             </span>
           </div>
 
-          {loading && <p className="muted mt-4">Loading messages...</p>}
+          {loading && (
+            <p className="mt-5 text-sm text-slate-500">
+              Loading your messages...
+            </p>
+          )}
 
           {!loading && items.length === 0 && (
-            <p className="muted mt-4">
-              You don't have any notifications yet.
-            </p>
+            <div className="mt-5 rounded-xl bg-blue-50 p-5 text-center">
+              <p className="text-2xl">📭</p>
+              <p className="mt-2 font-semibold text-[#17366f]">
+                No notifications yet
+              </p>
+              <p className="mt-1 text-sm text-slate-500">
+                New account updates will appear here.
+              </p>
+            </div>
           )}
 
           <div className="mt-4 space-y-3">
             {items.map((item) => (
               <article
                 key={item.id}
-                className="rounded-xl border border-gray-200 p-4"
+                className={`rounded-xl border p-4 ${
+                  item.is_read
+                    ? "border-blue-100 bg-white"
+                    : "border-blue-300 bg-blue-50"
+                }`}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <h3 className="font-bold">{item.title}</h3>
+                  <h3 className="font-bold text-[#17366f]">
+                    {item.title}
+                  </h3>
+
                   {!item.is_read && (
-                    <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-bold text-green-800">
+                    <span className="rounded-full bg-blue-700 px-3 py-1 text-xs font-bold text-white">
                       NEW
                     </span>
                   )}
                 </div>
 
-                <p className="mt-2 text-sm text-gray-600">
+                <p className="mt-2 text-sm leading-6 text-slate-700">
                   {item.message}
                 </p>
 
-                <p className="muted mt-3 text-xs">
+                <p className="mt-3 text-xs text-slate-500">
                   {new Date(item.created_at).toLocaleString()}
                 </p>
 
@@ -313,7 +361,7 @@ export default function Notifications() {
                   <button
                     type="button"
                     onClick={() => void markRead(item.id)}
-                    className="mt-3 text-sm font-bold text-green-800"
+                    className="mt-3 rounded-lg bg-blue-100 px-4 py-2 text-sm font-bold text-blue-800"
                   >
                     Mark as read
                   </button>
@@ -324,12 +372,15 @@ export default function Notifications() {
         </section>
 
         {error && (
-          <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
+          <p
+            role="alert"
+            className="rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-700"
+          >
             {error}
           </p>
         )}
       </div>
-    </Shell>
+    </DashboardShell>
   );
-          }
-        
+                  }
+      
