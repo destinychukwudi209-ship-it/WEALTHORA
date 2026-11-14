@@ -3,9 +3,13 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
-    request,
-  });
+  let response = NextResponse.next({ request });
+
+  const cookiesToSet: {
+    name: string;
+    value: string;
+    options?: any;
+  }[] = [];
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,22 +19,16 @@ export async function middleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(
-          cookiesToSet: {
-            name: string;
-            value: string;
-            options?: any;
-          }[]
-        ) {
-          cookiesToSet.forEach(({ name, value }) => {
+        setAll(cookies) {
+          cookies.forEach(({ name, value }) => {
             request.cookies.set(name, value);
           });
 
-          response = NextResponse.next({
-            request,
-          });
+          cookiesToSet.push(...cookies);
 
-          cookiesToSet.forEach(({ name, value, options }) => {
+          response = NextResponse.next({ request });
+
+          cookies.forEach(({ name, value, options }) => {
             response.cookies.set(name, value, options);
           });
         },
@@ -38,7 +36,47 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const pathname = request.nextUrl.pathname;
+
+  const protectedPaths = [
+    "/dashboard",
+    "/wallet",
+    "/profile",
+    "/settings",
+    "/transactions",
+    "/invest",
+    "/referrals",
+    "/notifications",
+    "/support",
+    "/deposit",
+    "/withdraw",
+    "/tasks",
+    "/admin",
+  ];
+
+  const requiresLogin = protectedPaths.some(
+    (path) =>
+      pathname === path || pathname.startsWith(`${path}/`)
+  );
+
+  if (!user && requiresLogin) {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/login";
+    loginUrl.search = "";
+    loginUrl.searchParams.set("next", pathname);
+
+    const redirectResponse = NextResponse.redirect(loginUrl);
+
+    cookiesToSet.forEach(({ name, value, options }) => {
+      redirectResponse.cookies.set(name, value, options);
+    });
+
+    return redirectResponse;
+  }
 
   response.headers.set("X-DNS-Prefetch-Control", "on");
   response.headers.set(
