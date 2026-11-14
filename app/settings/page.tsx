@@ -2,8 +2,8 @@
 "use client";
 
 import Link from "next/link";
+import DashboardShell from "@/components/dashboard-shell";
 import { useEffect, useState } from "react";
-import { Shell, PageTitle } from "@/components/shell";
 import { createClient } from "@/lib/supabase/client";
 
 type PinState =
@@ -41,20 +41,13 @@ function PinInput({
         placeholder={placeholder}
         aria-label={label}
         required
-        style={{
-          backgroundColor: "#ffffff",
-          color: "#000000",
-          caretColor: "#000000",
-          WebkitTextFillColor: "#000000",
-          opacity: 1,
-        }}
-        className="w-full rounded-xl border border-gray-300 p-3 pr-16 placeholder:text-gray-500"
+        className="w-full rounded-xl border border-blue-200 bg-white p-3 pr-16 text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
       />
 
       <button
         type="button"
         onClick={() => setVisible((previous) => !previous)}
-        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-sm font-semibold text-black"
+        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg bg-blue-50 px-2 py-1 text-sm font-semibold text-blue-800"
       >
         {visible ? "Hide" : "Show"}
       </button>
@@ -84,7 +77,6 @@ export default function Settings() {
 
     async function loadSettings() {
       const supabase = createClient();
-
       const { data, error } = await supabase.auth.getUser();
 
       if (!active) return;
@@ -98,7 +90,6 @@ export default function Settings() {
       setEmail(data.user.email ?? "");
 
       const verified = Boolean(data.user.email_confirmed_at);
-
       setVerification(verified ? "verified" : "unverified");
 
       if (!verified) {
@@ -117,7 +108,6 @@ export default function Settings() {
             ? `${statusError.message} (code: ${statusError.code ?? "unknown"})`
             : JSON.stringify(status)
         );
-
         setPinState("error");
         return;
       }
@@ -222,7 +212,6 @@ export default function Settings() {
           messages[data?.code] ??
             `PIN could not be saved. Database response: ${JSON.stringify(data)}`
         );
-
         return;
       }
 
@@ -232,7 +221,7 @@ export default function Settings() {
       setConfirmPin("");
 
       setPinMessage(
-        "Your Transaction PIN has been saved successfully and is available for withdrawal authorization."
+        "Your Transaction PIN has been saved successfully."
       );
     } catch (error) {
       setPinMessage(
@@ -278,52 +267,62 @@ export default function Settings() {
     },
   ];
 
+  const card =
+    "rounded-2xl border border-blue-100 bg-white p-5 text-[#17366f] shadow-sm";
+
   return (
-    <Shell>
-      <PageTitle
-        title="Security & settings"
-        subtitle="Protect your WEALTHORA account."
-      />
+    <DashboardShell>
+      <div className="mb-6 rounded-3xl bg-gradient-to-r from-[#e4efff] to-[#e5f5ff] p-6">
+        <p className="text-sm font-semibold text-blue-700">
+          Account centre
+        </p>
+        <h1 className="mt-2 text-3xl font-extrabold text-[#153675]">
+          Settings
+        </h1>
+        <p className="mt-2 text-sm text-blue-800">
+          Manage your account security and notification preferences.
+        </p>
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <section className="panel md:col-span-2">
+        <section className={`${card} md:col-span-2`}>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="font-semibold">Email verification</h2>
+            <h2 className="font-bold">Email verification</h2>
 
             {verification === "verified" && (
-              <span className="text-sm font-semibold text-green-400">
+              <span className="rounded-full bg-green-50 px-3 py-1 text-sm font-semibold text-green-700">
                 Verified
               </span>
             )}
 
             {verification === "unverified" && (
-              <span className="text-sm font-semibold text-amber-400">
+              <span className="rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700">
                 Action required
               </span>
             )}
           </div>
 
           {verification === "loading" && (
-            <p className="muted mt-2 text-sm">
+            <p className="mt-2 text-sm text-slate-600">
               Checking verification status...
             </p>
           )}
 
           {verification === "signed-out" && (
-            <p className="muted mt-2 text-sm">
+            <p className="mt-2 text-sm text-slate-600">
               Sign in to check your email verification.
             </p>
           )}
 
           {verification === "verified" && (
-            <p className="muted mt-2 text-sm">
+            <p className="mt-2 text-sm text-slate-600">
               Your email address has been confirmed.
             </p>
           )}
 
           {verification === "unverified" && (
             <>
-              <p className="muted mt-2 text-sm">
+              <p className="mt-2 text-sm text-slate-600">
                 Your email address has not been confirmed.
                 Check your inbox for the confirmation link.
               </p>
@@ -332,7 +331,7 @@ export default function Settings() {
                 type="button"
                 onClick={resendConfirmation}
                 disabled={sending}
-                className="btn mt-4 disabled:opacity-60"
+                className="mt-4 rounded-xl bg-blue-700 px-5 py-3 font-bold text-white disabled:opacity-60"
               >
                 {sending ? "Sending..." : "Resend confirmation email"}
               </button>
@@ -342,44 +341,44 @@ export default function Settings() {
           {message && (
             <p
               role="status"
-              className="mt-3 rounded-xl border border-[#526b36] bg-[#17251a] p-3 text-sm text-gray-200"
+              className="mt-3 rounded-xl border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900"
             >
               {message}
             </p>
           )}
         </section>
 
-        <section className="panel md:col-span-2">
+        <section className={`${card} md:col-span-2`}>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="font-semibold">Transaction PIN</h2>
+            <h2 className="font-bold">Transaction PIN</h2>
 
             {pinState === "ready" && (
-              <span className="text-sm font-semibold text-green-400">
+              <span className="rounded-full bg-green-50 px-3 py-1 text-sm font-semibold text-green-700">
                 {hasPin ? "PIN created" : "Not set up"}
               </span>
             )}
           </div>
 
           {pinState === "loading" && (
-            <p className="muted mt-2 text-sm">
+            <p className="mt-2 text-sm text-slate-600">
               Checking Transaction PIN status...
             </p>
           )}
 
           {pinState === "signed-out" && (
-            <p className="muted mt-2 text-sm">
+            <p className="mt-2 text-sm text-slate-600">
               Sign in to manage your Transaction PIN.
             </p>
           )}
 
           {pinState === "unverified" && (
-            <p className="muted mt-2 text-sm">
+            <p className="mt-2 text-sm text-slate-600">
               Verify your email before creating a Transaction PIN.
             </p>
           )}
 
           {pinState === "error" && (
-            <div className="mt-2 break-words text-sm text-amber-300">
+            <div className="mt-2 break-words text-sm text-amber-700">
               <p>PIN status error:</p>
               <p>{pinMessage}</p>
             </div>
@@ -387,7 +386,7 @@ export default function Settings() {
 
           {pinState === "ready" && (
             <>
-              <p className="muted mt-2 text-sm">
+              <p className="mt-2 text-sm text-slate-600">
                 {hasPin
                   ? "Change your six-digit PIN using your current PIN."
                   : "Create a six-digit PIN to add another layer of account security."}
@@ -420,7 +419,7 @@ export default function Settings() {
                 <button
                   type="submit"
                   disabled={savingPin}
-                  className="btn disabled:opacity-60"
+                  className="rounded-xl bg-blue-700 px-5 py-3 font-bold text-white disabled:opacity-60"
                 >
                   {savingPin
                     ? "Saving..."
@@ -433,46 +432,51 @@ export default function Settings() {
               {pinMessage && (
                 <p
                   role="status"
-                  className="mt-3 break-words text-sm text-amber-300"
+                  className="mt-3 break-words text-sm text-blue-800"
                 >
                   {pinMessage}
                 </p>
               )}
 
-              <p className="muted mt-3 text-xs">
+              <p className="mt-3 text-xs text-slate-500">
                 Your Transaction PIN is used by the secure withdrawal
                 request function to authorize withdrawal requests.
-                Never share your PIN with anyone. Other payment
-                authorization features may require separate implementation.
+                Never share your PIN with anyone.
               </p>
             </>
           )}
         </section>
 
         {pendingFeatures.map((item) => (
-          <section className="panel" key={item.title}>
-            <h2 className="font-semibold">{item.title}</h2>
-            <p className="muted mt-2 text-sm">{item.description}</p>
-            <p className="mt-3 text-xs font-semibold text-amber-300">
+          <section className={card} key={item.title}>
+            <h2 className="font-bold">{item.title}</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              {item.description}
+            </p>
+            <p className="mt-3 text-xs font-semibold text-amber-700">
               Not activated yet
             </p>
           </section>
         ))}
 
-        <section className="panel">
-          <h2 className="font-semibold">
+        <section className={card}>
+          <h2 className="font-bold">
             Notification preferences 🔔
           </h2>
 
-          <p className="muted mt-2 text-sm">
-            Manage your ringing tune and phone notification settings.
+          <p className="mt-2 text-sm text-slate-600">
+            Manage your notification and sound settings.
           </p>
 
-          <Link href="/notifications" className="btn mt-4 inline-block">
+          <Link
+            href="/notifications"
+            className="mt-4 inline-block rounded-xl bg-blue-700 px-5 py-3 font-bold text-white"
+          >
             Open notification settings
           </Link>
         </section>
       </div>
-    </Shell>
+    </DashboardShell>
   );
-  }
+    }
+            
