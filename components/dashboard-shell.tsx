@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 const links = [
   { href: "/dashboard", label: "Home", icon: "⌂" },
   { href: "/invest", label: "Invest", icon: "▥" },
+  { href: "/tasks", label: "My Tasks", icon: "✓" },
   { href: "/transactions", label: "History", icon: "◷" },
   { href: "/referrals", label: "Affiliate Centre", icon: "♧" },
   { href: "/support", label: "Get Support", icon: "◉" },
@@ -32,22 +33,24 @@ export default function DashboardShell({
 
     async function loadAccount() {
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
       if (!user || !active) return;
 
       setName(
         user.user_metadata?.full_name ||
-        user.user_metadata?.name ||
-        user.email?.split("@")[0] ||
-        "there"
+          user.user_metadata?.name ||
+          user.email?.split("@")[0] ||
+          "there"
       );
 
       setPhoto(
         user.user_metadata?.avatar_url ||
-        user.user_metadata?.picture ||
-        user.user_metadata?.profile_image_url ||
-        ""
+          user.user_metadata?.picture ||
+          user.user_metadata?.profile_image_url ||
+          ""
       );
 
       const { data: profile } = await supabase
@@ -67,7 +70,10 @@ export default function DashboardShell({
     }
 
     loadAccount();
-    return () => { active = false; };
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   function closeMenu() {
@@ -87,7 +93,10 @@ export default function DashboardShell({
           ☰
         </button>
 
-        <Link href="/dashboard" className="text-center text-lg font-black text-blue-800">
+        <Link
+          href="/dashboard"
+          className="text-center text-lg font-black text-blue-800"
+        >
           WEALTHORA
           <span className="block text-[9px] font-semibold tracking-widest">
             INVEST · EARN · GROW
@@ -125,10 +134,12 @@ export default function DashboardShell({
                 <p className="font-black text-blue-800">WEALTHORA</p>
                 <p className="text-xs text-slate-500">Hello, {name}</p>
               </div>
+
               <button
                 type="button"
                 onClick={closeMenu}
                 className="rounded-lg bg-blue-50 px-3 py-2 text-xl text-blue-800"
+                aria-label="Close menu"
               >
                 ×
               </button>
@@ -142,7 +153,9 @@ export default function DashboardShell({
                   onClick={closeMenu}
                   className="flex items-center gap-4 rounded-xl px-4 py-3 font-semibold text-[#183b86] hover:bg-blue-50"
                 >
-                  <span className="w-7 text-center text-xl">{item.icon}</span>
+                  <span className="w-7 text-center text-xl">
+                    {item.icon}
+                  </span>
                   {item.label}
                 </Link>
               ))}
@@ -164,7 +177,10 @@ export default function DashboardShell({
               onClick={async () => {
                 const supabase = createClient();
                 const { error } = await supabase.auth.signOut();
-                if (!error) window.location.assign("/login");
+
+                if (!error) {
+                  window.location.assign("/login");
+                }
               }}
               className="mt-6 w-full rounded-xl bg-red-50 px-4 py-3 font-bold text-red-700"
             >
@@ -182,8 +198,8 @@ export default function DashboardShell({
         {[
           { href: "/dashboard", label: "Home", icon: "⌂" },
           { href: "/invest", label: "Invest", icon: "▥" },
+          { href: "/tasks", label: "Tasks", icon: "✓" },
           { href: "/transactions", label: "History", icon: "◷" },
-          { href: "/support", label: "Support", icon: "♧" },
         ].map((item) => (
           <Link
             key={item.href}
@@ -194,15 +210,16 @@ export default function DashboardShell({
             <span className="text-[10px] font-semibold">{item.label}</span>
           </Link>
         ))}
+
         <button
           type="button"
           onClick={() => setMenuOpen(true)}
           className="flex flex-col items-center gap-1 py-2 text-blue-800"
         >
-          <span className="text-xl">⚙</span>
-          <span className="text-[10px] font-semibold">Settings</span>
+          <span className="text-xl">☰</span>
+          <span className="text-[10px] font-semibold">More</span>
         </button>
       </nav>
     </div>
   );
-           }
+            }
